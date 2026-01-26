@@ -1,0 +1,27 @@
+{
+  "name": "pec-backend",
+  "version": "1.0.0",
+  "description": "Backend API para o PEC - Prontuário Eletrônico do Cidadão",
+  "type": "module",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js"
+  },
+  "keywords": [
+    "pec",
+    "saude",
+    "prontuario"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.13.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11"
+  }
+}
