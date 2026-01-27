@@ -44,7 +44,7 @@ const simulateResponse = (messages, provider) => {
 // Rota principal de chat
 router.post('/chat', async (req, res) => {
     try {
-        const { provider = 'openai', messages, model } = req.body;
+        const { provider = 'deepseek', messages, model } = req.body;
 
         if (!messages || !Array.isArray(messages)) {
             return res.status(400).json({ error: 'Mensagens são obrigatórias' });
