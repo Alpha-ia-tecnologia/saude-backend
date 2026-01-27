@@ -40,7 +40,7 @@ router.post('/analyze', async (req, res) => {
  */
 router.post('/ai-insights', async (req, res) => {
     try {
-        const { symptoms, patientData, diagnoses, provider = 'openai' } = req.body;
+        const { symptoms, patientData, diagnoses, provider = 'deepseek' } = req.body;
 
         // First, get rule-based insights
         const ruleBasedInsights = clinicalDecisionService.generateInsights(

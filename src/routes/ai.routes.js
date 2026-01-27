@@ -73,7 +73,7 @@ router.post('/chat', async (req, res) => {
             });
         }
 
-        // Chamada real à API (OpenAI como exemplo)
+        // Chamada real à API OpenAI
         if (provider === 'openai') {
             const response = await axios.post(
                 `${providerConfig.baseUrl}/chat/completions`,
@@ -104,7 +104,75 @@ router.post('/chat', async (req, res) => {
             });
         }
 
-        // Para outros provedores, retornar modo demo por enquanto
+        // Chamada real à API DeepSeek (compatível com OpenAI API)
+        if (provider === 'deepseek') {
+            const response = await axios.post(
+                `${providerConfig.baseUrl}/chat/completions`,
+                {
+                    model: model || providerConfig.defaultModel,
+                    messages: messages.map(m => ({
+                        role: m.role,
+                        content: m.content
+                    })),
+                    max_tokens: 2000,
+                    temperature: 0.7
+                },
+                {
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            return res.json({
+                success: true,
+                mode: 'production',
+                provider,
+                response: {
+                    content: response.data.choices[0].message.content,
+                    model: response.data.model,
+                    usage: response.data.usage
+                }
+            });
+        }
+
+        // Chamada real à API Gemini
+        if (provider === 'gemini') {
+            const geminiMessages = messages.map(m => ({
+                role: m.role === 'assistant' ? 'model' : 'user',
+                parts: [{ text: m.content }]
+            }));
+
+            const response = await axios.post(
+                `${providerConfig.baseUrl}/models/${model || providerConfig.defaultModel}:generateContent?key=${apiKey}`,
+                {
+                    contents: geminiMessages,
+                    generationConfig: {
+                        maxOutputTokens: 2000
+                    }
+                },
+                {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            const content = response.data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sem resposta';
+
+            return res.json({
+                success: true,
+                mode: 'production',
+                provider,
+                response: {
+                    content,
+                    model: model || providerConfig.defaultModel
+                }
+            });
+        }
+
+        // Fallback para modo demo
         return res.json({
             success: true,
             mode: 'demo',

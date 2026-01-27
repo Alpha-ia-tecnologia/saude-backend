@@ -10,9 +10,27 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware
+// Middleware - CORS configurado para múltiplas origens
+const allowedOrigins = [
+    process.env.FRONTEND_URL,
+    'https://smarthealth.alphatechai.com.br',
+    'https://projeto-saude-saude-frontend.gkgtsp.easypanel.host',
+    'http://localhost:5173',
+    'http://localhost:3000'
+].filter(Boolean); // Remove undefined/empty values
+
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: function (origin, callback) {
+        // Permite requisições sem origin (como apps mobile ou curl)
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            console.log(`⚠️ CORS bloqueado para origin: ${origin}`);
+            callback(new Error('Não permitido pela política CORS'));
+        }
+    },
     credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
