@@ -28,8 +28,27 @@ const simulateResponse = (messages, provider) => {
 
     const responses = {
         default: `Esta é uma resposta simulada do ${provider}. Em ambiente de produção, você receberá respostas reais da API de IA.\n\nSua pergunta foi: "${lastMessage.substring(0, 100)}..."`,
-        greeting: 'Olá! Sou o assistente de IA do PEC. Como posso ajudar você hoje?',
-        clinical: `**Análise Clínica Simulada**\n\nBaseado nos sintomas descritos, recomendo:\n\n1. Avaliação completa do paciente\n2. Exames laboratoriais básicos\n3. Acompanhamento em 7 dias\n\n⚠️ *Esta é uma resposta simulada para demonstração.*`
+        greeting: `Olá! Sou o assistente de IA do **PEC (Prontuário Eletrônico do Cidadão)**, sistema de saúde pública do Brasil.
+
+**Minhas habilidades incluem:**
+- Apoio à decisão clínica baseada em evidências
+- Análise de sintomas e sugestão de diagnósticos diferenciais
+- Recomendação de exames laboratoriais e de imagem
+- Identificação de alertas de segurança e interações medicamentosas
+- Orientações sobre protocolos do Ministério da Saúde e SUS
+- Sugestão de medicamentos da RENAME
+
+Como posso ajudar você hoje?`,
+        clinical: `**Análise Clínica - PEC**
+
+Baseado nos sintomas descritos, recomendo:
+
+1. Avaliação clínica completa do paciente
+2. Verificação de sinais vitais e exame físico
+3. Exames laboratoriais conforme protocolo
+4. Acompanhamento conforme orientação do profissional
+
+⚠️ *Lembre-se: estas são sugestões de apoio à decisão clínica. A decisão final é sempre do profissional de saúde.*`
     };
 
     if (lastMessage.toLowerCase().includes('olá') || lastMessage.toLowerCase().includes('oi')) {
