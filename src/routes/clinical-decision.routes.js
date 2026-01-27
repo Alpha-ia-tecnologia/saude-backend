@@ -1,16 +1,15 @@
 import express from 'express';
 import { clinicalDecisionService } from '../services/clinical-decision.service.js';
-import { openaiService, geminiService, deepseekService } from '../services/index.js';
 
 const router = express.Router();
 
 /**
  * POST /api/clinical-decision/analyze
- * Analyze symptoms and return possible diagnoses
+ * Analyze symptoms and return possible diagnoses (with optional AI enhancement)
  */
 router.post('/analyze', async (req, res) => {
     try {
-        const { symptoms, patientData } = req.body;
+        const { symptoms, patientData, useAI = true } = req.body;
 
         if (!symptoms || !Array.isArray(symptoms) || symptoms.length === 0) {
             return res.status(400).json({
@@ -19,7 +18,13 @@ router.post('/analyze', async (req, res) => {
             });
         }
 
-        const analysis = clinicalDecisionService.analyzeSymptoms(symptoms, patientData || {});
+        // Use AI-enhanced analysis if available and requested
+        let analysis;
+        if (useAI) {
+            analysis = await clinicalDecisionService.analyzeSymptomsWithAI(symptoms, patientData || {});
+        } else {
+            analysis = clinicalDecisionService.analyzeSymptoms(symptoms, patientData || {});
+        }
 
         res.json({
             success: true,
@@ -36,60 +41,22 @@ router.post('/analyze', async (req, res) => {
 
 /**
  * POST /api/clinical-decision/ai-insights
- * Generate AI-powered insights using configured providers
+ * Generate AI-powered insights using DeepSeek
  */
 router.post('/ai-insights', async (req, res) => {
     try {
-        const { symptoms, patientData, diagnoses, provider = 'deepseek' } = req.body;
+        const { symptoms, patientData, diagnoses } = req.body;
 
-        // First, get rule-based insights
-        const ruleBasedInsights = clinicalDecisionService.generateInsights(
+        // Use the new AI-enhanced insights method from the service
+        const insights = await clinicalDecisionService.generateInsightsWithAI(
             patientData || {},
             symptoms || [],
             diagnoses || []
         );
 
-        // Try to enhance with AI provider
-        let aiEnhanced = false;
-        let aiResponse = null;
-
-        const prompt = buildAIPrompt(symptoms, patientData, diagnoses);
-
-        try {
-            let service;
-            switch (provider) {
-                case 'gemini':
-                    service = geminiService;
-                    break;
-                case 'deepseek':
-                    service = deepseekService;
-                    break;
-                default:
-                    service = openaiService;
-            }
-
-            if (service.isConfigured()) {
-                const messages = [
-                    { role: 'system', content: 'Você é um assistente médico especializado em apoio à decisão clínica. Forneça análises baseadas em evidências, sempre lembrando que a decisão final é do profissional de saúde.' },
-                    { role: 'user', content: prompt }
-                ];
-
-                aiResponse = await service.chat(messages);
-                aiEnhanced = true;
-            }
-        } catch (aiError) {
-            console.error('AI provider error:', aiError);
-            // Continue with rule-based insights only
-        }
-
         res.json({
             success: true,
-            data: {
-                ...ruleBasedInsights,
-                aiAnalysis: aiResponse?.content || null,
-                aiEnhanced,
-                provider: aiEnhanced ? provider : null
-            }
+            data: insights
         });
     } catch (error) {
         console.error('Erro ao gerar insights:', error);
@@ -102,7 +69,7 @@ router.post('/ai-insights', async (req, res) => {
 
 /**
  * GET /api/clinical-decision/recommendations/:diagnosis
- * Get detailed recommendations for a specific diagnosis
+ * Get detailed recommendations for a specific diagnosis (rule-based)
  */
 router.get('/recommendations/:diagnosis', async (req, res) => {
     try {
@@ -131,41 +98,37 @@ router.get('/recommendations/:diagnosis', async (req, res) => {
 });
 
 /**
- * Build AI prompt for clinical insights
+ * POST /api/clinical-decision/recommendations
+ * Get AI-powered detailed recommendations for a specific diagnosis
  */
-function buildAIPrompt(symptoms, patientData, diagnoses) {
-    let prompt = 'Analise o seguinte caso clínico e forneça insights:\n\n';
+router.post('/recommendations', async (req, res) => {
+    try {
+        const { diagnosis, patientData } = req.body;
 
-    if (patientData) {
-        prompt += '**Dados do Paciente:**\n';
-        if (patientData.age) prompt += `- Idade: ${patientData.age} anos\n`;
-        if (patientData.sex) prompt += `- Sexo: ${patientData.sex}\n`;
-        if (patientData.conditions?.length) prompt += `- Condições pré-existentes: ${patientData.conditions.join(', ')}\n`;
-        if (patientData.allergies?.length) prompt += `- Alergias: ${patientData.allergies.join(', ')}\n`;
-        if (patientData.medications?.length) prompt += `- Medicamentos em uso: ${patientData.medications.join(', ')}\n`;
-        prompt += '\n';
-    }
+        if (!diagnosis) {
+            return res.status(400).json({
+                success: false,
+                error: 'Diagnóstico não informado'
+            });
+        }
 
-    if (symptoms?.length) {
-        prompt += `**Sintomas Relatados:** ${symptoms.join(', ')}\n\n`;
-    }
+        const recommendations = await clinicalDecisionService.getRecommendationsWithAI(
+            diagnosis,
+            patientData || {}
+        );
 
-    if (diagnoses?.length) {
-        prompt += '**Diagnósticos Considerados:**\n';
-        diagnoses.forEach(d => {
-            prompt += `- ${d.name} (${d.probability}%)\n`;
+        res.json({
+            success: true,
+            data: recommendations
         });
-        prompt += '\n';
+    } catch (error) {
+        console.error('Erro ao buscar recomendações com IA:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro ao buscar recomendações'
+        });
     }
-
-    prompt += 'Por favor, forneça:\n';
-    prompt += '1. Análise geral do caso\n';
-    prompt += '2. Possíveis diagnósticos diferenciais adicionais\n';
-    prompt += '3. Exames prioritários\n';
-    prompt += '4. Alertas importantes\n';
-    prompt += '5. Recomendações de acompanhamento\n';
-
-    return prompt;
-}
+});
 
 export default router;
+

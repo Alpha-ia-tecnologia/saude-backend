@@ -1,4 +1,5 @@
 // Clinical Decision Service - Backend logic for symptom analysis and diagnosis recommendations
+import deepseekService from './deepseek.service.js';
 
 // Knowledge base for symptom-diagnosis mapping
 const symptomDatabase = {
@@ -200,6 +201,103 @@ class ClinicalDecisionService {
     }
 
     /**
+     * Analyze symptoms using DeepSeek AI for advanced analysis
+     */
+    async analyzeSymptomsWithAI(symptoms, patientData = {}) {
+        // First get rule-based analysis
+        const ruleBasedAnalysis = this.analyzeSymptoms(symptoms, patientData);
+
+        // If DeepSeek is not configured, return rule-based analysis
+        if (!deepseekService.isConfigured()) {
+            return {
+                ...ruleBasedAnalysis,
+                aiEnhanced: false
+            };
+        }
+
+        try {
+            const prompt = this.buildSymptomAnalysisPrompt(symptoms, patientData, ruleBasedAnalysis);
+
+            const messages = [
+                {
+                    role: 'system',
+                    content: `Você é um assistente médico especializado em apoio à decisão clínica. 
+Analise os sintomas do paciente e forneça uma análise detalhada.
+Responda SEMPRE em formato JSON válido com a seguinte estrutura:
+{
+    "analise": "análise clínica detalhada",
+    "diagnosticos_adicionais": ["diagnóstico 1", "diagnóstico 2"],
+    "exames_prioritarios": ["exame 1", "exame 2"],
+    "alertas": ["alerta 1", "alerta 2"],
+    "recomendacoes": ["recomendação 1", "recomendação 2"],
+    "gravidade": "baixa|moderada|alta|urgente"
+}`
+                },
+                { role: 'user', content: prompt }
+            ];
+
+            const response = await deepseekService.chat(messages);
+
+            // Try to parse AI response as JSON
+            let aiAnalysis = null;
+            try {
+                const jsonMatch = response.content.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    aiAnalysis = JSON.parse(jsonMatch[0]);
+                }
+            } catch (parseError) {
+                // If JSON parsing fails, use raw content
+                aiAnalysis = { analise: response.content };
+            }
+
+            return {
+                ...ruleBasedAnalysis,
+                aiEnhanced: true,
+                aiAnalysis,
+                aiModel: response.model
+            };
+        } catch (error) {
+            console.error('DeepSeek analysis error:', error);
+            return {
+                ...ruleBasedAnalysis,
+                aiEnhanced: false,
+                aiError: error.message
+            };
+        }
+    }
+
+    /**
+     * Build prompt for symptom analysis
+     */
+    buildSymptomAnalysisPrompt(symptoms, patientData, ruleBasedAnalysis) {
+        let prompt = 'Analise o seguinte caso clínico:\n\n';
+
+        if (patientData.age) prompt += `Idade: ${patientData.age} anos\n`;
+        if (patientData.sex) prompt += `Sexo: ${patientData.sex}\n`;
+        if (patientData.conditions?.length) prompt += `Condições pré-existentes: ${patientData.conditions.join(', ')}\n`;
+        if (patientData.allergies?.length) prompt += `Alergias: ${patientData.allergies.join(', ')}\n`;
+        if (patientData.medications?.length) prompt += `Medicamentos em uso: ${patientData.medications.join(', ')}\n`;
+
+        prompt += `\nSintomas relatados: ${symptoms.join(', ')}\n`;
+
+        if (ruleBasedAnalysis.possibleDiagnoses?.length) {
+            prompt += '\nDiagnósticos sugeridos pelo sistema:\n';
+            ruleBasedAnalysis.possibleDiagnoses.forEach(d => {
+                prompt += `- ${d.name} (${d.probability}%)\n`;
+            });
+        }
+
+        prompt += '\nForneça sua análise clínica considerando:\n';
+        prompt += '1. Correlação entre sintomas e histórico do paciente\n';
+        prompt += '2. Diagnósticos diferenciais que podem não ter sido considerados\n';
+        prompt += '3. Exames mais urgentes a solicitar\n';
+        prompt += '4. Alertas de segurança ou interações medicamentosas\n';
+        prompt += '5. Nível de gravidade do quadro\n';
+
+        return prompt;
+    }
+
+    /**
      * Get detailed recommendations for a specific diagnosis
      */
     getRecommendations(diagnosis) {
@@ -226,6 +324,75 @@ class ClinicalDecisionService {
             warnings: this.getWarnings(diagnosis),
             protocols: this.getProtocols(diagnosis)
         };
+    }
+
+    /**
+     * Get AI-powered recommendations using DeepSeek
+     */
+    async getRecommendationsWithAI(diagnosis, patientData = {}) {
+        const baseRecommendations = this.getRecommendations(diagnosis);
+
+        if (!deepseekService.isConfigured()) {
+            return {
+                ...baseRecommendations,
+                aiEnhanced: false
+            };
+        }
+
+        try {
+            const messages = [
+                {
+                    role: 'system',
+                    content: `Você é um especialista em medicina baseada em evidências. 
+Forneça recomendações de tratamento personalizadas considerando o diagnóstico e dados do paciente.
+Responda em formato JSON:
+{
+    "tratamento_recomendado": "descrição do tratamento",
+    "medicamentos_sugeridos": [{"nome": "", "dose": "", "frequencia": "", "duracao": ""}],
+    "orientacoes_gerais": ["orientação 1", "orientação 2"],
+    "sinais_alarme": ["sinal 1", "sinal 2"],
+    "seguimento": "recomendação de seguimento"
+}`
+                },
+                {
+                    role: 'user',
+                    content: `Diagnóstico: ${diagnosis}
+Idade: ${patientData.age || 'não informada'}
+Sexo: ${patientData.sex || 'não informado'}
+Condições pré-existentes: ${patientData.conditions?.join(', ') || 'nenhuma'}
+Alergias: ${patientData.allergies?.join(', ') || 'nenhuma conhecida'}
+Medicamentos em uso: ${patientData.medications?.join(', ') || 'nenhum'}
+
+Forneça recomendações de tratamento personalizadas.`
+                }
+            ];
+
+            const response = await deepseekService.chat(messages);
+
+            let aiRecommendations = null;
+            try {
+                const jsonMatch = response.content.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    aiRecommendations = JSON.parse(jsonMatch[0]);
+                }
+            } catch (parseError) {
+                aiRecommendations = { tratamento_recomendado: response.content };
+            }
+
+            return {
+                ...baseRecommendations,
+                aiEnhanced: true,
+                aiRecommendations,
+                aiModel: response.model
+            };
+        } catch (error) {
+            console.error('DeepSeek recommendations error:', error);
+            return {
+                ...baseRecommendations,
+                aiEnhanced: false,
+                aiError: error.message
+            };
+        }
     }
 
     /**
@@ -305,7 +472,83 @@ class ClinicalDecisionService {
             generatedAt: new Date().toISOString()
         };
     }
+
+    /**
+     * Generate AI-enhanced insights using DeepSeek
+     */
+    async generateInsightsWithAI(patientData, symptoms, diagnoses) {
+        const baseInsights = this.generateInsights(patientData, symptoms, diagnoses);
+
+        if (!deepseekService.isConfigured()) {
+            return {
+                ...baseInsights,
+                aiEnhanced: false
+            };
+        }
+
+        try {
+            const messages = [
+                {
+                    role: 'system',
+                    content: `Você é um médico especialista em análise clínica integrada.
+Analise o caso e forneça insights clínicos avançados.
+Responda em formato JSON:
+{
+    "analise_integrada": "análise considerando todos os fatores",
+    "riscos_identificados": ["risco 1", "risco 2"],
+    "interacoes_medicamentosas": ["interação 1"],
+    "recomendacoes_personalizadas": ["recomendação 1", "recomendação 2"],
+    "prognostico_estimado": "descrição do prognóstico",
+    "necessidade_encaminhamento": "sim/não e para qual especialidade"
+}`
+                },
+                {
+                    role: 'user',
+                    content: `Dados do Paciente:
+Idade: ${patientData.age || 'não informada'}
+Sexo: ${patientData.sex || 'não informado'}
+Condições: ${patientData.conditions?.join(', ') || 'nenhuma'}
+Alergias: ${patientData.allergies?.join(', ') || 'nenhuma'}
+Medicamentos: ${patientData.medications?.join(', ') || 'nenhum'}
+
+Sintomas: ${symptoms.join(', ')}
+
+Diagnósticos considerados:
+${diagnoses.map(d => `- ${d.name} (${d.probability}%)`).join('\n')}
+
+Forneça uma análise clínica integrada com insights avançados.`
+                }
+            ];
+
+            const response = await deepseekService.chat(messages);
+
+            let aiInsights = null;
+            try {
+                const jsonMatch = response.content.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    aiInsights = JSON.parse(jsonMatch[0]);
+                }
+            } catch (parseError) {
+                aiInsights = { analise_integrada: response.content };
+            }
+
+            return {
+                ...baseInsights,
+                aiEnhanced: true,
+                aiInsights,
+                aiModel: response.model
+            };
+        } catch (error) {
+            console.error('DeepSeek insights error:', error);
+            return {
+                ...baseInsights,
+                aiEnhanced: false,
+                aiError: error.message
+            };
+        }
+    }
 }
 
 export const clinicalDecisionService = new ClinicalDecisionService();
 export default clinicalDecisionService;
+
