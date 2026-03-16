@@ -17,5 +17,5 @@ RUN npx prisma generate
 # Expose port
 EXPOSE 3001
 
-# Run migrations, seed, and start
-CMD ["sh", "-c", "npx prisma migrate deploy && npx prisma db seed && npm start"]
+# Run migrations (best-effort), seed (best-effort), then start
+CMD ["sh", "-c", "npx prisma migrate deploy || true; npx prisma db seed || true; npm start"]
