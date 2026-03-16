@@ -20,47 +20,9 @@ import panelRoutes from './routes/panel.routes.js';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware - CORS configurado para múltiplas origens
-const allowedOrigins = [
-    process.env.FRONTEND_URL?.replace(/\/+$/, ''),
-    'https://smarthealth.alphatechai.com.br',
-    'https://projeto-saude-saude-frontend.gkgtsp.easypanel.host',
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'http://localhost:5175',
-    'http://localhost:5176',
-    'http://localhost:5177',
-    'http://localhost:3000'
-].filter(Boolean);
-
-// Preflight handler explícito — garante resposta antes de qualquer middleware
-app.use((req, res, next) => {
-    const origin = req.headers.origin;
-    if (req.method === 'OPTIONS') {
-        if (!origin || allowedOrigins.includes(origin)) {
-            res.set({
-                'Access-Control-Allow-Origin': origin || '*',
-                'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,PATCH,OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Requested-With',
-                'Access-Control-Allow-Credentials': 'true',
-                'Access-Control-Max-Age': '86400',
-            });
-        }
-        return res.sendStatus(204);
-    }
-    next();
-});
-
+// Middleware - CORS aberto para todas as origens
 app.use(cors({
-    origin: function (origin, callback) {
-        if (!origin) return callback(null, true);
-        if (allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            console.log(`⚠️ CORS bloqueado para origin: ${origin}`);
-            callback(new Error('Não permitido pela política CORS'));
-        }
-    },
+    origin: true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
