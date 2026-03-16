@@ -50,10 +50,12 @@ app.get('/api/health', (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-    console.error(err.stack);
+    console.error('GLOBAL ERROR:', req.method, req.url, err.message, err.stack);
     res.status(500).json({
         error: 'Erro interno do servidor',
-        message: process.env.NODE_ENV === 'development' ? err.message : undefined
+        message: err.message,
+        path: req.url,
+        stack: err.stack?.split('\n').slice(0, 5)
     });
 });
 
