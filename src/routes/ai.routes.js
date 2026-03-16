@@ -227,7 +227,25 @@ router.post('/chat', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Erro na API de IA:', error.response?.data || error.message);
+        console.error('Erro na API de IA:', error.response?.status, error.response?.data || error.message);
+        
+        // Se for erro de autenticação (401/403), retornar modo demo ao invés de 500
+        if (error.response?.status === 401 || error.response?.status === 403) {
+            const { provider = 'deepseek', messages, model } = req.body;
+            const providerConfig = AI_PROVIDERS[provider] || AI_PROVIDERS.deepseek;
+            const simulatedContent = simulateResponse(messages || [], provider);
+            return res.json({
+                success: true,
+                mode: 'demo',
+                provider,
+                response: {
+                    content: simulatedContent,
+                    model: model || providerConfig.defaultModel
+                },
+                notice: 'API key inválida ou expirada. Usando modo demonstração.'
+            });
+        }
+        
         res.status(500).json({
             error: 'Erro ao processar requisição de IA',
             details: error.message,
