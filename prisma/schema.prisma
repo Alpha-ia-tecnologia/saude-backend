@@ -1,0 +1,599 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ═══════════════════════════════════════════════════════
+// ADMIN DOMAIN
+// ═══════════════════════════════════════════════════════
+
+model Module {
+  id          Int          @id @default(autoincrement())
+  nome        String       @unique
+  permissions Permission[]
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  @@map("modules")
+}
+
+model Role {
+  id          Int          @id @default(autoincrement())
+  nome        String       @unique
+  descricao   String?
+  cor         String?
+  permissions Permission[]
+  users       User[]
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  @@map("roles")
+}
+
+model Permission {
+  id       Int     @id @default(autoincrement())
+  roleId   Int     @map("role_id")
+  moduleId Int     @map("module_id")
+  read     Boolean @default(false)
+  write    Boolean @default(false)
+  role     Role    @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  module   Module  @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, moduleId])
+  @@map("permissions")
+}
+
+model User {
+  id          Int       @id @default(autoincrement())
+  nome        String
+  email       String    @unique
+  cpf         String?
+  roleId      Int       @map("role_id")
+  status      String    @default("ativo")
+  ultimoLogin DateTime? @map("ultimo_login")
+  role        Role      @relation(fields: [roleId], references: [id])
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([roleId])
+  @@index([status])
+  @@map("users")
+}
+
+// ═══════════════════════════════════════════════════════
+// TRIAGE DOMAIN
+// ═══════════════════════════════════════════════════════
+
+model TriageEntry {
+  id             String   @id @default(uuid())
+  codigo         String   @unique
+  patientId      String   @map("patient_id")
+  patientName    String   @map("patient_name")
+  patientAge     Int?     @map("patient_age")
+  patientCNS     String?  @map("patient_cns")
+  vitalSigns     Json     @map("vital_signs")
+  symptoms       String[]
+  mainComplaint  String?  @map("main_complaint")
+  classification Json
+  alerts         String[]
+  status         String   @default("waiting")
+  registeredBy   String?  @map("registered_by")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("triage_entries")
+}
+
+// ═══════════════════════════════════════════════════════
+// PHARMACY DOMAIN
+// ═══════════════════════════════════════════════════════
+
+model Medication {
+  id               String             @id
+  nome             String
+  concentracao     String?
+  forma            String?
+  categoria        String?
+  lots             Lot[]
+  prescriptionItems PrescriptionItem[]
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+
+  @@index([nome])
+  @@index([categoria])
+  @@map("medications")
+}
+
+model Lot {
+  id              String     @id
+  medicationId    String     @map("medication_id")
+  lote            String
+  validade        String
+  quantidade      Int
+  fabricante      String?
+  dataRecebimento String?    @map("data_recebimento")
+  medication      Medication @relation(fields: [medicationId], references: [id])
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+
+  @@index([medicationId])
+  @@index([validade])
+  @@map("lots")
+}
+
+model PharmacyPrescription {
+  id            String             @id
+  paciente      String
+  prontuario    String?
+  medico        String
+  dataHora      String             @map("data_hora")
+  status        String             @default("recebida")
+  itens         PrescriptionItem[]
+  dispensations Dispensation[]
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@map("pharmacy_prescriptions")
+}
+
+model PrescriptionItem {
+  id             String               @id @default(uuid())
+  prescriptionId String               @map("prescription_id")
+  medicationId   String               @map("medication_id")
+  nome           String
+  quantidade     Int
+  separado       Boolean              @default(false)
+  prescription   PharmacyPrescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  medication     Medication           @relation(fields: [medicationId], references: [id])
+
+  @@index([prescriptionId])
+  @@map("prescription_items")
+}
+
+model Dispensation {
+  id             String                @id
+  prescriptionId String?               @map("prescription_id")
+  paciente       String
+  medicamento    String
+  lote           String
+  quantidade     Int
+  responsavel    String?
+  dataHora       String                @map("data_hora")
+  prescription   PharmacyPrescription? @relation(fields: [prescriptionId], references: [id])
+  createdAt      DateTime              @default(now()) @map("created_at")
+
+  @@index([prescriptionId])
+  @@map("dispensations")
+}
+
+// ═══════════════════════════════════════════════════════
+// NURSING DOMAIN
+// ═══════════════════════════════════════════════════════
+
+model NursingPatient {
+  id            String                @id
+  nome          String
+  leito         String?
+  idade         Int?
+  prontuario    String?
+  prescriptions NursingPrescription[]
+  schedules     MedicationSchedule[]
+  checks        MedicationCheck[]
+  createdAt     DateTime              @default(now()) @map("created_at")
+  updatedAt     DateTime              @updatedAt @map("updated_at")
+
+  @@map("nursing_patients")
+}
+
+model NursingPrescription {
+  id            String               @id
+  patientId     String               @map("patient_id")
+  medicamento   String
+  dose          String?
+  via           String?
+  frequencia    String?
+  intervalHours Int?                 @map("interval_hours")
+  prescritor    String?
+  dataInicio    String?              @map("data_inicio")
+  dataFim       String?              @map("data_fim")
+  status        String               @default("ativa")
+  patient       NursingPatient       @relation(fields: [patientId], references: [id])
+  schedules     MedicationSchedule[]
+  checks        MedicationCheck[]
+  createdAt     DateTime             @default(now()) @map("created_at")
+  updatedAt     DateTime             @updatedAt @map("updated_at")
+
+  @@index([patientId])
+  @@index([status])
+  @@map("nursing_prescriptions")
+}
+
+model MedicationSchedule {
+  id             String              @id
+  prescriptionId String              @map("prescription_id")
+  patientId      String              @map("patient_id")
+  medicamento    String
+  dose           String?
+  via            String?
+  horarios       String[]
+  criadoPor      String?             @map("criado_por")
+  prescription   NursingPrescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  patient        NursingPatient      @relation(fields: [patientId], references: [id])
+  checks         MedicationCheck[]
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+
+  @@index([patientId])
+  @@index([prescriptionId])
+  @@map("medication_schedules")
+}
+
+model MedicationCheck {
+  id              String              @id
+  scheduleId      String              @map("schedule_id")
+  prescriptionId  String              @map("prescription_id")
+  patientId       String              @map("patient_id")
+  medicamento     String
+  dose            String?
+  via             String?
+  horarioPrevisto String              @map("horario_previsto")
+  horarioReal     String?             @map("horario_real")
+  data            String
+  status          String              @default("administrado")
+  responsavel     String?
+  observacoes     String?
+  schedule        MedicationSchedule  @relation(fields: [scheduleId], references: [id])
+  prescription    NursingPrescription @relation(fields: [prescriptionId], references: [id])
+  patient         NursingPatient      @relation(fields: [patientId], references: [id])
+  createdAt       DateTime            @default(now()) @map("created_at")
+
+  @@index([patientId])
+  @@index([data])
+  @@map("medication_checks")
+}
+
+// ═══════════════════════════════════════════════════════
+// ACS DOMAIN
+// ═══════════════════════════════════════════════════════
+
+model Microarea {
+  id        Int        @id @default(autoincrement())
+  nome      String
+  codigo    String     @unique
+  bairro    String?
+  acsId     Int?       @map("acs_id")
+  acsNome   String?    @map("acs_nome")
+  acsAvatar String?    @map("acs_avatar")
+  acsTelefone String?  @map("acs_telefone")
+  families  Family[]
+  alerts    AcsAlert[]
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  @@map("microareas")
+}
+
+model Family {
+  id              Int          @id @default(autoincrement())
+  microareaId     Int          @map("microarea_id")
+  sobrenome       String
+  responsavel     String
+  endereco        String?
+  membros         Int          @default(1)
+  renda           String?
+  moradia         String?
+  agua            String?
+  esgoto          String?
+  vulnerabilidade String       @default("Media")
+  fatoresRisco    String[]     @map("fatores_risco")
+  observacoes     String?
+  microarea       Microarea    @relation(fields: [microareaId], references: [id])
+  individuals     Individual[]
+  alerts          AcsAlert[]
+  visits          Visit[]
+  referrals       Referral[]
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  @@index([microareaId])
+  @@index([vulnerabilidade])
+  @@map("families")
+}
+
+model Individual {
+  id        Int      @id @default(autoincrement())
+  familiaId Int      @map("familia_id")
+  nome      String
+  idade     Int?
+  sexo      String?
+  riscos    Json
+  family    Family   @relation(fields: [familiaId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([familiaId])
+  @@map("individuals")
+}
+
+model AcsAlert {
+  id            Int       @id @default(autoincrement())
+  tipo          String
+  urgencia      String
+  pacienteNome  String    @map("paciente_nome")
+  familiaId     Int?      @map("familia_id")
+  microareaId   Int?      @map("microarea_id")
+  motivo        String?
+  diasPendentes Int?      @map("dias_pendentes")
+  status        String    @default("pending")
+  dataCriacao   String?   @map("data_criacao")
+  dataResolucao String?   @map("data_resolucao")
+  family        Family?   @relation(fields: [familiaId], references: [id])
+  microarea     Microarea? @relation(fields: [microareaId], references: [id])
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([urgencia])
+  @@index([microareaId])
+  @@map("acs_alerts")
+}
+
+model Visit {
+  id               Int       @id @default(autoincrement())
+  familiaId        Int       @map("familia_id")
+  pacienteNome     String?   @map("paciente_nome")
+  endereco         String?
+  tipo             String?
+  data             String
+  hora             String?
+  status           String    @default("agendada")
+  acsId            Int?      @map("acs_id")
+  motivo           String?
+  observacoes      String?
+  condicaoPaciente String?   @map("condicao_paciente")
+  sinaisVitais     Json?     @map("sinais_vitais")
+  encaminhamento   Boolean   @default(false)
+  proximaVisita    String?   @map("proxima_visita")
+  dataRealizacao   String?   @map("data_realizacao")
+  family           Family    @relation(fields: [familiaId], references: [id])
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  @@index([familiaId])
+  @@index([data])
+  @@index([status])
+  @@map("visits")
+}
+
+model Referral {
+  id           Int      @id @default(autoincrement())
+  pacienteNome String?  @map("paciente_nome")
+  familiaId    Int?     @map("familia_id")
+  microareaId  Int?     @map("microarea_id")
+  destinatario String?
+  prioridade   String?  @default("normal")
+  motivo       String?
+  observacoes  String?
+  status       String?  @default("enviado")
+  dataCriacao  String?  @map("data_criacao")
+  acsNome      String?  @map("acs_nome")
+  family       Family?  @relation(fields: [familiaId], references: [id])
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("referrals")
+}
+
+// ═══════════════════════════════════════════════════════
+// CHAT DOMAIN
+// ═══════════════════════════════════════════════════════
+
+model ChatUser {
+  id                     String           @id
+  nome                   String
+  cargo                  String?
+  departamento           String?
+  avatar                 String?
+  online                 Boolean          @default(false)
+  sentChannelMessages    ChannelMessage[] @relation("ChannelMessageSender")
+  sentDirectMessages     DirectMessage[]  @relation("DirectSender")
+  receivedDirectMessages DirectMessage[]  @relation("DirectReceiver")
+  channelMemberships     ChannelMember[]
+  createdAt              DateTime         @default(now()) @map("created_at")
+  updatedAt              DateTime         @updatedAt @map("updated_at")
+
+  @@map("chat_users")
+}
+
+model Channel {
+  id           String           @id
+  nome         String
+  descricao    String?
+  icone        String?          @default("hash")
+  departamento String?
+  members      ChannelMember[]
+  messages     ChannelMessage[]
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+
+  @@map("channels")
+}
+
+model ChannelMember {
+  id        String   @id @default(uuid())
+  channelId String   @map("channel_id")
+  userId    String   @map("user_id")
+  naoLidas  Int      @default(0) @map("nao_lidas")
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  user      ChatUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([channelId, userId])
+  @@map("channel_members")
+}
+
+model ChannelMessage {
+  id        String   @id
+  channelId String   @map("channel_id")
+  fromId    String   @map("from_id")
+  from      String
+  text      String
+  read      Boolean  @default(false)
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  sender    ChatUser @relation("ChannelMessageSender", fields: [fromId], references: [id])
+  timestamp DateTime @default(now())
+
+  @@index([channelId])
+  @@index([timestamp])
+  @@map("channel_messages")
+}
+
+model DirectMessage {
+  id        String   @id
+  fromId    String   @map("from_id")
+  toId      String   @map("to_id")
+  text      String
+  read      Boolean  @default(false)
+  sender    ChatUser @relation("DirectSender", fields: [fromId], references: [id])
+  receiver  ChatUser @relation("DirectReceiver", fields: [toId], references: [id])
+  timestamp DateTime @default(now())
+
+  @@index([fromId, toId])
+  @@index([timestamp])
+  @@map("direct_messages")
+}
+
+// ═══════════════════════════════════════════════════════
+// NPS DOMAIN
+// ═══════════════════════════════════════════════════════
+
+model NpsSurvey {
+  id           Int      @id @default(autoincrement())
+  pacienteNome String?  @map("paciente_nome")
+  score        Int
+  category     String
+  comment      String?
+  date         String
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([score])
+  @@index([category])
+  @@index([date])
+  @@map("nps_surveys")
+}
+
+// ═══════════════════════════════════════════════════════
+// PANEL DOMAIN
+// ═══════════════════════════════════════════════════════
+
+model Guiche {
+  id            String   @id
+  nome          String
+  tipo          String
+  profissional  String?
+  especialidade String?
+  senhas        Senha[]
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("guiches")
+}
+
+model Senha {
+  id         String              @id
+  numero     String
+  paciente   String
+  cpf        String?
+  tipo       String              @default("normal")
+  status     String              @default("aguardando")
+  guicheId   String?             @map("guiche_id")
+  prioridade String?             @default("normal")
+  chamadoEm  DateTime?           @map("chamado_em")
+  atendidoEm DateTime?           @map("atendido_em")
+  guiche     Guiche?             @relation(fields: [guicheId], references: [id])
+  historico  HistoricoChamada[]
+  criadoEm   DateTime            @default(now()) @map("criado_em")
+  updatedAt  DateTime            @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([tipo])
+  @@index([criadoEm])
+  @@map("senhas")
+}
+
+model HistoricoChamada {
+  id           String   @id
+  senhaId      String   @map("senha_id")
+  numero       String
+  paciente     String
+  guicheNome   String   @map("guiche_nome")
+  profissional String?
+  chamadoEm    DateTime @map("chamado_em")
+  senha        Senha    @relation(fields: [senhaId], references: [id])
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([chamadoEm])
+  @@map("historico_chamadas")
+}
+
+// ═══════════════════════════════════════════════════════
+// RECONCILIATION DOMAIN
+// ═══════════════════════════════════════════════════════
+
+model ReconciliationPatient {
+  id          String                 @id
+  patientName String                 @map("patient_name")
+  age         Int?
+  medications ContinuousMedication[]
+  createdAt   DateTime               @default(now()) @map("created_at")
+  updatedAt   DateTime               @updatedAt @map("updated_at")
+
+  @@map("reconciliation_patients")
+}
+
+model ContinuousMedication {
+  id         String                @id @default(uuid())
+  patientId  String                @map("patient_id")
+  name       String
+  dose       String?
+  frequency  String?
+  route      String?               @default("Oral")
+  prescriber String?
+  since      String?
+  patient    ReconciliationPatient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  createdAt  DateTime              @default(now()) @map("created_at")
+  updatedAt  DateTime              @updatedAt @map("updated_at")
+
+  @@index([patientId])
+  @@map("continuous_medications")
+}
+
+model DrugInteraction {
+  id             Int      @id @default(autoincrement())
+  drug1          String
+  drug2          String
+  severity       String
+  type           String
+  description    String
+  recommendation String
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([drug1, drug2])
+  @@map("drug_interactions")
+}
+
+model DrugAlias {
+  id            Int      @id @default(autoincrement())
+  canonicalName String   @map("canonical_name")
+  alias         String   @unique
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([canonicalName])
+  @@map("drug_aliases")
+}

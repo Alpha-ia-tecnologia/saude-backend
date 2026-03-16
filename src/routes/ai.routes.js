@@ -22,6 +22,26 @@ const AI_PROVIDERS = {
     }
 };
 
+const SYSTEM_PROMPT = `Você é o Assistente de IA do PEC (Prontuário Eletrônico do Cidadão), um sistema de saúde pública do Brasil integrado ao SUS.
+
+Seu papel é auxiliar profissionais de saúde (médicos, enfermeiros, farmacêuticos, ACS) com:
+
+1. **Apoio à Decisão Clínica**: Análise de sintomas, diagnósticos diferenciais baseados em evidências, escores clínicos (Manchester, NEWS, SOFA).
+2. **Farmacologia**: Interações medicamentosas, posologia, medicamentos da RENAME/REMUME, contraindicações, ajuste renal/hepático.
+3. **Protocolos do SUS**: Linhas de cuidado, protocolos do Ministério da Saúde, fluxos de encaminhamento, PCDT (Protocolos Clínicos e Diretrizes Terapêuticas).
+4. **Exames**: Interpretação de resultados laboratoriais, indicação de exames conforme protocolo, valores de referência.
+5. **Epidemiologia**: Doenças de notificação compulsória, vigilância epidemiológica, sazonalidade de doenças.
+6. **Atenção Primária**: Estratégia Saúde da Família, territorialização, visitas domiciliares, grupos prioritários (gestantes, idosos, crianças, crônicos).
+
+Diretrizes:
+- Responda sempre em português brasileiro
+- Use terminologia médica adequada mas acessível
+- Cite protocolos e referências quando aplicável (ex: "Conforme protocolo do MS para HAS...")
+- Inclua alertas de segurança quando relevante (alergias, interações, contraindicações)
+- Sempre inclua o aviso: decisão final é do profissional de saúde
+- Formate respostas com markdown para melhor legibilidade
+- Seja objetivo e estruturado nas respostas`;
+
 // Respostas simuladas para modo demo
 const simulateResponse = (messages, provider) => {
     const lastMessage = messages[messages.length - 1]?.content || '';
@@ -92,16 +112,19 @@ router.post('/chat', async (req, res) => {
             });
         }
 
+            // Prepara mensagens com system prompt
+        const chatMessages = [
+            { role: 'system', content: SYSTEM_PROMPT },
+            ...messages.map(m => ({ role: m.role, content: m.content }))
+        ];
+
         // Chamada real à API OpenAI
         if (provider === 'openai') {
             const response = await axios.post(
                 `${providerConfig.baseUrl}/chat/completions`,
                 {
                     model: model || providerConfig.defaultModel,
-                    messages: messages.map(m => ({
-                        role: m.role,
-                        content: m.content
-                    })),
+                    messages: chatMessages,
                     max_tokens: 2000
                 },
                 {
@@ -129,11 +152,8 @@ router.post('/chat', async (req, res) => {
                 `${providerConfig.baseUrl}/chat/completions`,
                 {
                     model: model || providerConfig.defaultModel,
-                    messages: messages.map(m => ({
-                        role: m.role,
-                        content: m.content
-                    })),
-                    max_tokens: 2000,
+                    messages: chatMessages,
+                    max_tokens: 4000,
                     temperature: 0.7
                 },
                 {
@@ -158,17 +178,21 @@ router.post('/chat', async (req, res) => {
 
         // Chamada real à API Gemini
         if (provider === 'gemini') {
-            const geminiMessages = messages.map(m => ({
-                role: m.role === 'assistant' ? 'model' : 'user',
-                parts: [{ text: m.content }]
-            }));
+            const geminiMessages = [
+                { role: 'user', parts: [{ text: SYSTEM_PROMPT }] },
+                { role: 'model', parts: [{ text: 'Entendido. Estou pronto para auxiliar como assistente médico do PEC.' }] },
+                ...messages.map(m => ({
+                    role: m.role === 'assistant' ? 'model' : 'user',
+                    parts: [{ text: m.content }]
+                }))
+            ];
 
             const response = await axios.post(
                 `${providerConfig.baseUrl}/models/${model || providerConfig.defaultModel}:generateContent?key=${apiKey}`,
                 {
                     contents: geminiMessages,
                     generationConfig: {
-                        maxOutputTokens: 2000
+                        maxOutputTokens: 4000
                     }
                 },
                 {

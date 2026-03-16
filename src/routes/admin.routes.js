@@ -4,10 +4,10 @@ import adminService from '../services/admin.service.js';
 const router = Router();
 
 // GET /api/admin/users - List all users
-router.get('/users', (req, res) => {
+router.get('/users', async (req, res) => {
     try {
         const { roleId, status, search } = req.query;
-        const users = adminService.getUsers({ roleId, status, search });
+        const users = await adminService.getUsers({ roleId, status, search });
         res.json({ success: true, data: users, total: users.length });
     } catch (error) {
         res.status(500).json({ error: 'Erro ao listar usuarios', message: error.message });
@@ -15,7 +15,7 @@ router.get('/users', (req, res) => {
 });
 
 // POST /api/admin/users - Create user
-router.post('/users', (req, res) => {
+router.post('/users', async (req, res) => {
     try {
         const { nome, email, cpf, roleId } = req.body;
 
@@ -23,7 +23,7 @@ router.post('/users', (req, res) => {
             return res.status(400).json({ error: 'Nome, email e perfil sao obrigatorios' });
         }
 
-        const user = adminService.createUser({ nome, email, cpf, roleId });
+        const user = await adminService.createUser({ nome, email, cpf, roleId });
         res.status(201).json({ success: true, user });
     } catch (error) {
         if (error.message.includes('ja cadastrado')) {
@@ -34,10 +34,10 @@ router.post('/users', (req, res) => {
 });
 
 // PUT /api/admin/users/:id - Update user
-router.put('/users/:id', (req, res) => {
+router.put('/users/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const user = adminService.updateUser(id, req.body);
+        const user = await adminService.updateUser(id, req.body);
         res.json({ success: true, user });
     } catch (error) {
         if (error.message.includes('nao encontrado')) {
@@ -48,10 +48,10 @@ router.put('/users/:id', (req, res) => {
 });
 
 // DELETE /api/admin/users/:id - Deactivate user
-router.delete('/users/:id', (req, res) => {
+router.delete('/users/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const user = adminService.deactivateUser(id);
+        const user = await adminService.deactivateUser(id);
         res.json({ success: true, user, message: 'Usuario desativado com sucesso' });
     } catch (error) {
         if (error.message.includes('nao encontrado')) {
@@ -62,9 +62,9 @@ router.delete('/users/:id', (req, res) => {
 });
 
 // GET /api/admin/roles - List roles with permissions
-router.get('/roles', (req, res) => {
+router.get('/roles', async (req, res) => {
     try {
-        const roles = adminService.getRoles();
+        const roles = await adminService.getRoles();
         res.json({ success: true, data: roles });
     } catch (error) {
         res.status(500).json({ error: 'Erro ao listar perfis', message: error.message });
@@ -72,7 +72,7 @@ router.get('/roles', (req, res) => {
 });
 
 // PUT /api/admin/roles/:id/permissions - Update role permissions
-router.put('/roles/:id/permissions', (req, res) => {
+router.put('/roles/:id/permissions', async (req, res) => {
     try {
         const { id } = req.params;
         const { permissions } = req.body;
@@ -81,7 +81,7 @@ router.put('/roles/:id/permissions', (req, res) => {
             return res.status(400).json({ error: 'Permissoes sao obrigatorias' });
         }
 
-        const role = adminService.updatePermissions(id, permissions);
+        const role = await adminService.updatePermissions(id, permissions);
         res.json({ success: true, role });
     } catch (error) {
         if (error.message.includes('nao encontrado')) {
@@ -92,9 +92,9 @@ router.put('/roles/:id/permissions', (req, res) => {
 });
 
 // GET /api/admin/modules - List available modules
-router.get('/modules', (req, res) => {
+router.get('/modules', async (req, res) => {
     try {
-        const modules = adminService.getModules();
+        const modules = await adminService.getModules();
         res.json({ success: true, data: modules });
     } catch (error) {
         res.status(500).json({ error: 'Erro ao listar modulos', message: error.message });

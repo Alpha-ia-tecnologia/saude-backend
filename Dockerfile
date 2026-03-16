@@ -6,13 +6,16 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci --only=production
+RUN npm ci
 
 # Copy source code
 COPY . .
 
-# Expose port
-EXPOSE 3000
+# Generate Prisma client
+RUN npx prisma generate
 
-# Start the application
-CMD ["npm", "start"]
+# Expose port
+EXPOSE 3001
+
+# Run migrations, seed, and start
+CMD ["sh", "-c", "npx prisma migrate deploy && npx prisma db seed && npm start"]

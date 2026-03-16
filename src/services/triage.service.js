@@ -1,4 +1,7 @@
 // Triage Service - Manchester Protocol risk classification and priority queue management
+// Refactored to use Prisma instead of in-memory arrays
+
+import prisma from '../lib/prisma.js';
 
 // Priority levels based on Manchester Protocol
 const MANCHESTER_LEVELS = {
@@ -33,187 +36,50 @@ const PREDEFINED_SYMPTOMS = [
     { id: 'erupcao_cutanea', label: 'Erupcao cutanea' }
 ];
 
-// In-memory patient queue
-let triageQueue = [
-    {
-        id: 'TRI-001',
-        patientId: 'PAC-001',
-        patientName: 'Maria Silva Santos',
-        patientAge: 67,
-        patientCNS: '898.0001.0002.0003',
-        vitalSigns: {
-            temperature: 38.8,
-            systolicBP: 180,
-            diastolicBP: 110,
-            heartRate: 110,
-            respiratoryRate: 22,
-            oxygenSaturation: 93,
-            painLevel: 7,
-            bloodGlucose: 220
-        },
-        symptoms: ['febre', 'dispneia', 'dor_toracica'],
-        mainComplaint: 'Dor no peito intensa ha 2 horas, com falta de ar e febre',
-        classification: MANCHESTER_LEVELS.ORANGE,
-        alerts: [
-            'PA Sistolica elevada: 180 mmHg',
-            'FC elevada: 110 bpm',
-            'Glicemia elevada: 220 mg/dL',
-            'Dor toracica presente'
-        ],
-        status: 'waiting',
-        registeredAt: new Date(Date.now() - 25 * 60000).toISOString(),
-        registeredBy: 'Enf. Ana Paula',
-        updatedAt: null
-    },
-    {
-        id: 'TRI-002',
-        patientId: 'PAC-002',
-        patientName: 'Joao Carlos Oliveira',
-        patientAge: 45,
-        patientCNS: '898.0002.0003.0004',
-        vitalSigns: {
-            temperature: 39.8,
-            systolicBP: 90,
-            diastolicBP: 60,
-            heartRate: 130,
-            respiratoryRate: 28,
-            oxygenSaturation: 88,
-            painLevel: 9,
-            bloodGlucose: 95
-        },
-        symptoms: ['febre', 'dispneia', 'confusao_mental', 'cianose'],
-        mainComplaint: 'Febre alta, dificuldade respiratoria severa, confusao mental',
-        classification: MANCHESTER_LEVELS.RED,
-        alerts: [
-            'EMERGENCIA: Temperatura >= 39.5C: 39.8C',
-            'EMERGENCIA: SpO2 < 90%: 88%',
-            'EMERGENCIA: Dor nivel >= 9',
-            'PA Sistolica baixa: 90 mmHg (hipotensao)',
-            'FC muito elevada: 130 bpm',
-            'FR elevada: 28 irpm',
-            'Confusao mental presente',
-            'Cianose presente'
-        ],
-        status: 'waiting',
-        registeredAt: new Date(Date.now() - 10 * 60000).toISOString(),
-        registeredBy: 'Enf. Carlos Lima',
-        updatedAt: null
-    },
-    {
-        id: 'TRI-003',
-        patientId: 'PAC-003',
-        patientName: 'Ana Beatriz Souza',
-        patientAge: 32,
-        patientCNS: '898.0003.0004.0005',
-        vitalSigns: {
-            temperature: 37.2,
-            systolicBP: 120,
-            diastolicBP: 80,
-            heartRate: 78,
-            respiratoryRate: 16,
-            oxygenSaturation: 98,
-            painLevel: 4,
-            bloodGlucose: 90
-        },
-        symptoms: ['dor_cabeca', 'nausea'],
-        mainComplaint: 'Dor de cabeca persistente ha 3 dias, com nausea ocasional',
-        classification: MANCHESTER_LEVELS.GREEN,
-        alerts: [],
-        status: 'waiting',
-        registeredAt: new Date(Date.now() - 45 * 60000).toISOString(),
-        registeredBy: 'Enf. Ana Paula',
-        updatedAt: null
-    },
-    {
-        id: 'TRI-004',
-        patientId: 'PAC-004',
-        patientName: 'Pedro Henrique Lima',
-        patientAge: 8,
-        patientCNS: '898.0004.0005.0006',
-        vitalSigns: {
-            temperature: 39.0,
-            systolicBP: 100,
-            diastolicBP: 65,
-            heartRate: 120,
-            respiratoryRate: 24,
-            oxygenSaturation: 95,
-            painLevel: 6,
-            bloodGlucose: 88
-        },
-        symptoms: ['febre', 'tosse', 'dor_abdominal', 'vomito'],
-        mainComplaint: 'Crianca com febre alta ha 1 dia, vomitando e com tosse',
-        classification: MANCHESTER_LEVELS.YELLOW,
-        alerts: [
-            'Temperatura elevada: 39.0C',
-            'FC elevada para idade: 120 bpm',
-            'FR elevada: 24 irpm',
-            'Paciente pediatrico com vomitos'
-        ],
-        status: 'waiting',
-        registeredAt: new Date(Date.now() - 35 * 60000).toISOString(),
-        registeredBy: 'Enf. Maria Santos',
-        updatedAt: null
-    },
-    {
-        id: 'TRI-005',
-        patientId: 'PAC-005',
-        patientName: 'Lucia Fernanda Costa',
-        patientAge: 55,
-        patientCNS: '898.0005.0006.0007',
-        vitalSigns: {
-            temperature: 36.8,
-            systolicBP: 135,
-            diastolicBP: 85,
-            heartRate: 72,
-            respiratoryRate: 15,
-            oxygenSaturation: 97,
-            painLevel: 2,
-            bloodGlucose: 110
-        },
-        symptoms: ['dor_lombar', 'fadiga'],
-        mainComplaint: 'Dor lombar cronica piorando nas ultimas semanas',
-        classification: MANCHESTER_LEVELS.BLUE,
-        alerts: [],
-        status: 'waiting',
-        registeredAt: new Date(Date.now() - 60 * 60000).toISOString(),
-        registeredBy: 'Enf. Ana Paula',
-        updatedAt: null
-    },
-    {
-        id: 'TRI-006',
-        patientId: 'PAC-006',
-        patientName: 'Roberto Alves Mendes',
-        patientAge: 72,
-        patientCNS: '898.0006.0007.0008',
-        vitalSigns: {
-            temperature: 38.2,
-            systolicBP: 160,
-            diastolicBP: 100,
-            heartRate: 98,
-            respiratoryRate: 20,
-            oxygenSaturation: 91,
-            painLevel: 8,
-            bloodGlucose: 280
-        },
-        symptoms: ['dispneia', 'dor_toracica', 'edema', 'fadiga'],
-        mainComplaint: 'Falta de ar progressiva, dor no peito, pernas inchadas',
-        classification: MANCHESTER_LEVELS.ORANGE,
-        alerts: [
-            'Dor nivel >= 8 (Muito Urgente)',
-            'SpO2 baixa: 91%',
-            'PA Sistolica elevada: 160 mmHg',
-            'Glicemia muito elevada: 280 mg/dL',
-            'Dor toracica presente',
-            'Paciente idoso (72 anos)'
-        ],
-        status: 'waiting',
-        registeredAt: new Date(Date.now() - 15 * 60000).toISOString(),
-        registeredBy: 'Enf. Carlos Lima',
-        updatedAt: null
-    }
-];
+/**
+ * Reconstruct the full triage entry from a DB row.
+ * The `classification` column stores the MANCHESTER_LEVELS object as JSON,
+ * but we re-hydrate from the constant so the reference stays consistent.
+ */
+function formatEntry(row) {
+    const classObj = row.classification;
+    const level = MANCHESTER_LEVELS[classObj.code] || classObj;
 
-let nextTriageId = 7;
+    return {
+        id: row.codigo,
+        patientId: row.patientId,
+        patientName: row.patientName,
+        patientAge: row.patientAge,
+        patientCNS: row.patientCNS,
+        vitalSigns: row.vitalSigns,
+        symptoms: row.symptoms,
+        mainComplaint: row.mainComplaint,
+        classification: level,
+        alerts: row.alerts,
+        status: row.status,
+        registeredAt: row.createdAt.toISOString(),
+        registeredBy: row.registeredBy,
+        updatedAt: row.updatedAt ? row.updatedAt.toISOString() : null
+    };
+}
+
+/**
+ * Generate the next TRI-XXX code by querying the max existing code.
+ */
+async function nextTriageCode() {
+    const last = await prisma.triageEntry.findFirst({
+        where: { codigo: { startsWith: 'TRI-' } },
+        orderBy: { codigo: 'desc' }
+    });
+
+    let nextNum = 1;
+    if (last) {
+        const numPart = parseInt(last.codigo.replace('TRI-', ''), 10);
+        if (!isNaN(numPart)) nextNum = numPart + 1;
+    }
+
+    return `TRI-${String(nextNum).padStart(3, '0')}`;
+}
 
 class TriageService {
     /**
@@ -252,13 +118,12 @@ class TriageService {
             alerts.push(`EMERGENCIA: Glicemia critica: ${vitalSigns.bloodGlucose} mg/dL`);
             level = 'RED';
         }
-        // Dangerous symptoms that immediately classify as RED
         if (symptoms.includes('perda_consciencia') || symptoms.includes('convulsao')) {
             alerts.push('EMERGENCIA: Sintoma critico presente (perda de consciencia/convulsao)');
             level = 'RED';
         }
 
-        // === ORANGE (Very Urgent) conditions (only escalate, never downgrade) ===
+        // === ORANGE (Very Urgent) conditions ===
         if (level !== 'RED') {
             if (vitalSigns.painLevel >= 8) {
                 alerts.push(`Dor nivel >= 8 (Muito Urgente)`);
@@ -367,69 +232,82 @@ class TriageService {
     /**
      * Register a new triage entry and add to queue
      */
-    addToQueue(triageData) {
+    async addToQueue(triageData) {
         const { classification, alerts } = this.classifyByVitalSigns(
             triageData.vitalSigns,
             triageData.symptoms || []
         );
 
-        const triageEntry = {
-            id: `TRI-${String(nextTriageId++).padStart(3, '0')}`,
-            patientId: triageData.patientId || `PAC-${String(nextTriageId).padStart(3, '0')}`,
-            patientName: triageData.patientName,
-            patientAge: triageData.patientAge || null,
-            patientCNS: triageData.patientCNS || null,
-            vitalSigns: triageData.vitalSigns,
-            symptoms: triageData.symptoms || [],
-            mainComplaint: triageData.mainComplaint || '',
-            classification,
-            alerts,
-            status: 'waiting',
-            registeredAt: new Date().toISOString(),
-            registeredBy: triageData.registeredBy || 'Sistema',
-            updatedAt: null
-        };
+        const codigo = await nextTriageCode();
 
-        triageQueue.push(triageEntry);
-        return triageEntry;
+        const row = await prisma.triageEntry.create({
+            data: {
+                codigo,
+                patientId: triageData.patientId || codigo.replace('TRI', 'PAC'),
+                patientName: triageData.patientName,
+                patientAge: triageData.patientAge || null,
+                patientCNS: triageData.patientCNS || null,
+                vitalSigns: triageData.vitalSigns,
+                symptoms: triageData.symptoms || [],
+                mainComplaint: triageData.mainComplaint || '',
+                classification,
+                alerts,
+                status: 'waiting',
+                registeredBy: triageData.registeredBy || 'Sistema'
+            }
+        });
+
+        return formatEntry(row);
     }
 
     /**
      * Get the priority-sorted queue
-     * Sorted by: classification level (ascending = more urgent first), then by registeredAt (older first)
+     * Sorted by: classification level (ascending = more urgent first), then by createdAt (older first)
      */
-    getQueue(statusFilter = null) {
-        let queue = [...triageQueue];
-
+    async getQueue(statusFilter = null) {
+        const where = {};
         if (statusFilter) {
-            queue = queue.filter(t => t.status === statusFilter);
+            where.status = statusFilter;
         }
 
-        // Sort by priority (lower order = higher priority), then by registration time
-        queue.sort((a, b) => {
+        const rows = await prisma.triageEntry.findMany({
+            where,
+            orderBy: { createdAt: 'asc' }
+        });
+
+        const entries = rows.map(formatEntry);
+
+        // Sort by classification order, then by registeredAt
+        entries.sort((a, b) => {
             const orderDiff = a.classification.order - b.classification.order;
             if (orderDiff !== 0) return orderDiff;
             return new Date(a.registeredAt) - new Date(b.registeredAt);
         });
 
-        return queue;
+        return entries;
     }
 
     /**
      * Get a specific patient's triage data
      */
-    getPatientTriage(id) {
-        return triageQueue.find(t => t.id === id) || null;
+    async getPatientTriage(id) {
+        const row = await prisma.triageEntry.findUnique({
+            where: { codigo: id }
+        });
+
+        if (!row) return null;
+        return formatEntry(row);
     }
 
     /**
      * Update triage data for a patient
      */
-    updateTriage(id, updateData) {
-        const index = triageQueue.findIndex(t => t.id === id);
-        if (index === -1) return null;
+    async updateTriage(id, updateData) {
+        const existing = await prisma.triageEntry.findUnique({
+            where: { codigo: id }
+        });
 
-        const existing = triageQueue[index];
+        if (!existing) return null;
 
         // If vital signs or symptoms are updated, re-classify
         if (updateData.vitalSigns || updateData.symptoms) {
@@ -440,25 +318,39 @@ class TriageService {
             updateData.alerts = alerts;
         }
 
-        triageQueue[index] = {
-            ...existing,
-            ...updateData,
-            id: existing.id, // Prevent ID from being overwritten
-            updatedAt: new Date().toISOString()
-        };
+        // Build Prisma update payload from allowed fields
+        const data = {};
+        if (updateData.patientName !== undefined) data.patientName = updateData.patientName;
+        if (updateData.patientAge !== undefined) data.patientAge = updateData.patientAge;
+        if (updateData.patientCNS !== undefined) data.patientCNS = updateData.patientCNS;
+        if (updateData.vitalSigns !== undefined) data.vitalSigns = updateData.vitalSigns;
+        if (updateData.symptoms !== undefined) data.symptoms = updateData.symptoms;
+        if (updateData.mainComplaint !== undefined) data.mainComplaint = updateData.mainComplaint;
+        if (updateData.classification !== undefined) data.classification = updateData.classification;
+        if (updateData.alerts !== undefined) data.alerts = updateData.alerts;
+        if (updateData.status !== undefined) data.status = updateData.status;
+        if (updateData.registeredBy !== undefined) data.registeredBy = updateData.registeredBy;
 
-        return triageQueue[index];
+        const row = await prisma.triageEntry.update({
+            where: { codigo: id },
+            data
+        });
+
+        return formatEntry(row);
     }
 
     /**
      * Get high-priority alerts (RED and ORANGE patients)
      */
-    getAlerts() {
-        return triageQueue
-            .filter(t =>
-                (t.classification.code === 'RED' || t.classification.code === 'ORANGE') &&
-                t.status === 'waiting'
-            )
+    async getAlerts() {
+        const rows = await prisma.triageEntry.findMany({
+            where: { status: 'waiting' },
+            orderBy: { createdAt: 'asc' }
+        });
+
+        return rows
+            .map(formatEntry)
+            .filter(e => e.classification.code === 'RED' || e.classification.code === 'ORANGE')
             .sort((a, b) => {
                 const orderDiff = a.classification.order - b.classification.order;
                 if (orderDiff !== 0) return orderDiff;

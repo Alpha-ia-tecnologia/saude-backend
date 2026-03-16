@@ -3,13 +3,9 @@ import { pharmacyService } from '../services/pharmacy.service.js';
 
 const router = express.Router();
 
-/**
- * GET /api/pharmacy/inventory
- * Get full inventory with lot details
- */
-router.get('/inventory', (req, res) => {
+router.get('/inventory', async (req, res) => {
     try {
-        const inventory = pharmacyService.getInventory();
+        const inventory = await pharmacyService.getInventory();
         res.json({ success: true, data: inventory });
     } catch (error) {
         console.error('Erro ao buscar estoque:', error);
@@ -17,13 +13,9 @@ router.get('/inventory', (req, res) => {
     }
 });
 
-/**
- * GET /api/pharmacy/medications
- * Get medications catalog (for selectors)
- */
-router.get('/medications', (req, res) => {
+router.get('/medications', async (req, res) => {
     try {
-        const medications = pharmacyService.getMedications();
+        const medications = await pharmacyService.getMedications();
         res.json({ success: true, data: medications });
     } catch (error) {
         console.error('Erro ao buscar medicamentos:', error);
@@ -31,22 +23,13 @@ router.get('/medications', (req, res) => {
     }
 });
 
-/**
- * POST /api/pharmacy/lots
- * Add new lot to inventory
- */
-router.post('/lots', (req, res) => {
+router.post('/lots', async (req, res) => {
     try {
         const { medicationId, lote, validade, quantidade, fabricante } = req.body;
-
         if (!medicationId || !lote || !validade || !quantidade) {
-            return res.status(400).json({
-                success: false,
-                error: 'medicationId, lote, validade e quantidade são obrigatórios'
-            });
+            return res.status(400).json({ success: false, error: 'medicationId, lote, validade e quantidade são obrigatórios' });
         }
-
-        const newLot = pharmacyService.addLot({ medicationId, lote, validade, quantidade, fabricante });
+        const newLot = await pharmacyService.addLot({ medicationId, lote, validade, quantidade, fabricante });
         res.json({ success: true, data: newLot });
     } catch (error) {
         console.error('Erro ao adicionar lote:', error);
@@ -54,14 +37,10 @@ router.post('/lots', (req, res) => {
     }
 });
 
-/**
- * GET /api/pharmacy/lots/:medicationId
- * Get lots for a specific medication
- */
-router.get('/lots/:medicationId', (req, res) => {
+router.get('/lots/:medicationId', async (req, res) => {
     try {
         const { medicationId } = req.params;
-        const medLots = pharmacyService.getLotsByMedication(medicationId);
+        const medLots = await pharmacyService.getLotsByMedication(medicationId);
         res.json({ success: true, data: medLots });
     } catch (error) {
         console.error('Erro ao buscar lotes:', error);
@@ -69,14 +48,10 @@ router.get('/lots/:medicationId', (req, res) => {
     }
 });
 
-/**
- * GET /api/pharmacy/expiring
- * Get medications near expiry
- */
-router.get('/expiring', (req, res) => {
+router.get('/expiring', async (req, res) => {
     try {
         const days = parseInt(req.query.days, 10) || 90;
-        const expiring = pharmacyService.getExpiringMedications(days);
+        const expiring = await pharmacyService.getExpiringMedications(days);
         res.json({ success: true, data: expiring });
     } catch (error) {
         console.error('Erro ao buscar medicamentos vencendo:', error);
@@ -84,22 +59,13 @@ router.get('/expiring', (req, res) => {
     }
 });
 
-/**
- * POST /api/pharmacy/dispense
- * Record dispensation (FIFO)
- */
-router.post('/dispense', (req, res) => {
+router.post('/dispense', async (req, res) => {
     try {
         const { medicationId, quantidade, paciente, responsavel } = req.body;
-
         if (!medicationId || !quantidade) {
-            return res.status(400).json({
-                success: false,
-                error: 'medicationId e quantidade são obrigatórios'
-            });
+            return res.status(400).json({ success: false, error: 'medicationId e quantidade são obrigatórios' });
         }
-
-        const dispensed = pharmacyService.dispenseMedication({ medicationId, quantidade, paciente, responsavel });
+        const dispensed = await pharmacyService.dispenseMedication({ medicationId, quantidade, paciente, responsavel });
         res.json({ success: true, data: dispensed });
     } catch (error) {
         console.error('Erro ao dispensar medicamento:', error);
@@ -107,13 +73,9 @@ router.post('/dispense', (req, res) => {
     }
 });
 
-/**
- * GET /api/pharmacy/prescriptions/pending
- * Get pending prescriptions to separate
- */
-router.get('/prescriptions/pending', (req, res) => {
+router.get('/prescriptions/pending', async (req, res) => {
     try {
-        const pending = pharmacyService.getPendingPrescriptions();
+        const pending = await pharmacyService.getPendingPrescriptions();
         res.json({ success: true, data: pending });
     } catch (error) {
         console.error('Erro ao buscar prescrições pendentes:', error);
@@ -121,13 +83,9 @@ router.get('/prescriptions/pending', (req, res) => {
     }
 });
 
-/**
- * GET /api/pharmacy/prescriptions
- * Get all prescriptions
- */
-router.get('/prescriptions', (req, res) => {
+router.get('/prescriptions', async (req, res) => {
     try {
-        const all = pharmacyService.getAllPrescriptions();
+        const all = await pharmacyService.getAllPrescriptions();
         res.json({ success: true, data: all });
     } catch (error) {
         console.error('Erro ao buscar prescrições:', error);
@@ -135,22 +93,13 @@ router.get('/prescriptions', (req, res) => {
     }
 });
 
-/**
- * POST /api/pharmacy/prescriptions
- * Receive a new prescription (prescription explosion)
- */
-router.post('/prescriptions', (req, res) => {
+router.post('/prescriptions', async (req, res) => {
     try {
         const { paciente, prontuario, medico, itens } = req.body;
-
         if (!paciente || !medico || !itens || !itens.length) {
-            return res.status(400).json({
-                success: false,
-                error: 'paciente, medico e itens são obrigatórios'
-            });
+            return res.status(400).json({ success: false, error: 'paciente, medico e itens são obrigatórios' });
         }
-
-        const prescription = pharmacyService.receivePrescription({ paciente, prontuario, medico, itens });
+        const prescription = await pharmacyService.receivePrescription({ paciente, prontuario, medico, itens });
         res.json({ success: true, data: prescription });
     } catch (error) {
         console.error('Erro ao receber prescrição:', error);
@@ -158,16 +107,11 @@ router.post('/prescriptions', (req, res) => {
     }
 });
 
-/**
- * POST /api/pharmacy/prescriptions/:id/separate
- * Mark items as separated in a prescription
- */
-router.post('/prescriptions/:id/separate', (req, res) => {
+router.post('/prescriptions/:id/separate', async (req, res) => {
     try {
         const { id } = req.params;
         const { separatedItemIndexes } = req.body;
-
-        const prescription = pharmacyService.separateItems(id, separatedItemIndexes);
+        const prescription = await pharmacyService.separateItems(id, separatedItemIndexes);
         res.json({ success: true, data: prescription });
     } catch (error) {
         console.error('Erro ao separar prescrição:', error);
@@ -175,16 +119,11 @@ router.post('/prescriptions/:id/separate', (req, res) => {
     }
 });
 
-/**
- * POST /api/pharmacy/prescriptions/:id/dispense
- * Mark prescription as dispensed
- */
-router.post('/prescriptions/:id/dispense', (req, res) => {
+router.post('/prescriptions/:id/dispense', async (req, res) => {
     try {
         const { id } = req.params;
         const { responsavel } = req.body;
-
-        const prescription = pharmacyService.dispensePrescription(id, responsavel);
+        const prescription = await pharmacyService.dispensePrescription(id, responsavel);
         res.json({ success: true, data: prescription });
     } catch (error) {
         console.error('Erro ao dispensar prescrição:', error);
@@ -192,13 +131,9 @@ router.post('/prescriptions/:id/dispense', (req, res) => {
     }
 });
 
-/**
- * GET /api/pharmacy/dispensations
- * Get dispensation history
- */
-router.get('/dispensations', (req, res) => {
+router.get('/dispensations', async (req, res) => {
     try {
-        const dispensations = pharmacyService.getDispensations();
+        const dispensations = await pharmacyService.getDispensations();
         res.json({ success: true, data: dispensations });
     } catch (error) {
         console.error('Erro ao buscar dispensações:', error);

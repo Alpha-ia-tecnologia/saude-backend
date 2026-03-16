@@ -3,13 +3,9 @@ import { chatService } from '../services/chat.service.js';
 
 const router = express.Router();
 
-/**
- * GET /api/chat/channels
- * List all channels
- */
-router.get('/channels', (req, res) => {
+router.get('/channels', async (req, res) => {
     try {
-        const channels = chatService.getChannels();
+        const channels = await chatService.getChannels();
         res.json({ success: true, data: channels });
     } catch (error) {
         console.error('Erro ao buscar canais:', error);
@@ -17,14 +13,10 @@ router.get('/channels', (req, res) => {
     }
 });
 
-/**
- * GET /api/chat/channels/:id/messages
- * Get messages for a channel
- */
-router.get('/channels/:id/messages', (req, res) => {
+router.get('/channels/:id/messages', async (req, res) => {
     try {
         const { id } = req.params;
-        const messages = chatService.getMessages(id);
+        const messages = await chatService.getMessages(id);
         res.json({ success: true, data: messages });
     } catch (error) {
         console.error('Erro ao buscar mensagens do canal:', error);
@@ -32,23 +24,14 @@ router.get('/channels/:id/messages', (req, res) => {
     }
 });
 
-/**
- * POST /api/chat/channels/:id/messages
- * Send message to a channel
- */
-router.post('/channels/:id/messages', (req, res) => {
+router.post('/channels/:id/messages', async (req, res) => {
     try {
         const { id } = req.params;
         const { fromId, text } = req.body;
-
         if (!text) {
-            return res.status(400).json({
-                success: false,
-                error: 'Texto da mensagem é obrigatório'
-            });
+            return res.status(400).json({ success: false, error: 'Texto da mensagem é obrigatório' });
         }
-
-        const message = chatService.sendMessage(id, fromId || 'U001', text);
+        const message = await chatService.sendMessage(id, fromId || 'U001', text);
         res.json({ success: true, data: message });
     } catch (error) {
         console.error('Erro ao enviar mensagem:', error);
@@ -56,15 +39,11 @@ router.post('/channels/:id/messages', (req, res) => {
     }
 });
 
-/**
- * GET /api/chat/direct/:userId
- * Get direct messages with a user
- */
-router.get('/direct/:userId', (req, res) => {
+router.get('/direct/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
         const currentUserId = req.query.currentUserId || 'U001';
-        const messages = chatService.getDirectMessages(userId, currentUserId);
+        const messages = await chatService.getDirectMessages(userId, currentUserId);
         res.json({ success: true, data: messages });
     } catch (error) {
         console.error('Erro ao buscar mensagens diretas:', error);
@@ -72,23 +51,14 @@ router.get('/direct/:userId', (req, res) => {
     }
 });
 
-/**
- * POST /api/chat/direct/:userId
- * Send direct message to a user
- */
-router.post('/direct/:userId', (req, res) => {
+router.post('/direct/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
         const { fromId, text } = req.body;
-
         if (!text) {
-            return res.status(400).json({
-                success: false,
-                error: 'Texto da mensagem é obrigatório'
-            });
+            return res.status(400).json({ success: false, error: 'Texto da mensagem é obrigatório' });
         }
-
-        const message = chatService.sendDirectMessage(userId, fromId || 'U001', text);
+        const message = await chatService.sendDirectMessage(userId, fromId || 'U001', text);
         res.json({ success: true, data: message });
     } catch (error) {
         console.error('Erro ao enviar mensagem direta:', error);
@@ -96,13 +66,9 @@ router.post('/direct/:userId', (req, res) => {
     }
 });
 
-/**
- * GET /api/chat/users
- * Get available users/contacts
- */
-router.get('/users', (req, res) => {
+router.get('/users', async (req, res) => {
     try {
-        const users = chatService.getUsers();
+        const users = await chatService.getUsers();
         res.json({ success: true, data: users });
     } catch (error) {
         console.error('Erro ao buscar usuários:', error);
@@ -110,13 +76,9 @@ router.get('/users', (req, res) => {
     }
 });
 
-/**
- * GET /api/chat/users/online
- * Get online users
- */
-router.get('/users/online', (req, res) => {
+router.get('/users/online', async (req, res) => {
     try {
-        const online = chatService.getOnlineUsers();
+        const online = await chatService.getOnlineUsers();
         res.json({ success: true, data: online });
     } catch (error) {
         console.error('Erro ao buscar usuários online:', error);
@@ -124,14 +86,10 @@ router.get('/users/online', (req, res) => {
     }
 });
 
-/**
- * GET /api/chat/contacts
- * Get direct message contacts with last message and unread
- */
-router.get('/contacts', (req, res) => {
+router.get('/contacts', async (req, res) => {
     try {
         const currentUserId = req.query.currentUserId || 'U001';
-        const contacts = chatService.getDirectMessageContacts(currentUserId);
+        const contacts = await chatService.getDirectMessageContacts(currentUserId);
         res.json({ success: true, data: contacts });
     } catch (error) {
         console.error('Erro ao buscar contatos:', error);
@@ -139,13 +97,9 @@ router.get('/contacts', (req, res) => {
     }
 });
 
-/**
- * GET /api/chat/me
- * Get current user info
- */
-router.get('/me', (req, res) => {
+router.get('/me', async (req, res) => {
     try {
-        const user = chatService.getCurrentUser();
+        const user = await chatService.getCurrentUser();
         res.json({ success: true, data: user });
     } catch (error) {
         console.error('Erro ao buscar usuário atual:', error);

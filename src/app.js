@@ -1,6 +1,9 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
+import prisma from './lib/prisma.js';
 import authRoutes from './routes/auth.routes.js';
 import aiRoutes from './routes/ai.routes.js';
 import clinicalDecisionRoutes from './routes/clinical-decision.routes.js';
@@ -13,8 +16,6 @@ import adminRoutes from './routes/admin.routes.js';
 import chatRoutes from './routes/chat.routes.js';
 import acsRoutes from './routes/acs.routes.js';
 import panelRoutes from './routes/panel.routes.js';
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -78,6 +79,17 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
+});
+
+// Graceful shutdown - desconectar Prisma
+process.on('SIGINT', async () => {
+    await prisma.$disconnect();
+    process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+    await prisma.$disconnect();
+    process.exit(0);
 });
 
 export default app;

@@ -1,217 +1,9 @@
 // Nursing Service - Aprazamento (medication scheduling) and Checagem (medication checking)
 // RF12 - Aprazamento de Medicamentos
 // RF13 - Checagem de Medicamentos
+// Refactored to use Prisma instead of in-memory arrays
 
-// In-memory data store
-
-// Patients with active prescriptions
-const patients = [
-    {
-        id: 'P001',
-        nome: 'Maria Silva Santos',
-        leito: 'Enf. A - Leito 12',
-        idade: 68,
-        prontuario: 'PRONT-2025-0012'
-    },
-    {
-        id: 'P002',
-        nome: 'José Carlos Oliveira',
-        leito: 'Enf. B - Leito 04',
-        idade: 55,
-        prontuario: 'PRONT-2025-0034'
-    },
-    {
-        id: 'P003',
-        nome: 'Ana Paula Ferreira',
-        leito: 'UTI - Leito 02',
-        idade: 42,
-        prontuario: 'PRONT-2025-0056'
-    },
-    {
-        id: 'P004',
-        nome: 'Pedro Henrique Lima',
-        leito: 'Enf. A - Leito 08',
-        idade: 73,
-        prontuario: 'PRONT-2025-0078'
-    }
-];
-
-// Active prescriptions
-const prescriptions = [
-    {
-        id: 'RX001',
-        patientId: 'P001',
-        medicamento: 'Dipirona 500mg',
-        dose: '1 comprimido',
-        via: 'VO',
-        frequencia: '6/6h',
-        intervalHours: 6,
-        prescritor: 'Dr. Carlos Oliveira',
-        dataInicio: '2026-03-12',
-        dataFim: '2026-03-19',
-        status: 'ativa'
-    },
-    {
-        id: 'RX002',
-        patientId: 'P001',
-        medicamento: 'Losartana 50mg',
-        dose: '1 comprimido',
-        via: 'VO',
-        frequencia: '12/12h',
-        intervalHours: 12,
-        prescritor: 'Dr. Carlos Oliveira',
-        dataInicio: '2026-03-10',
-        dataFim: '2026-03-24',
-        status: 'ativa'
-    },
-    {
-        id: 'RX003',
-        patientId: 'P001',
-        medicamento: 'Insulina NPH 10UI',
-        dose: '10 unidades',
-        via: 'SC',
-        frequencia: '12/12h',
-        intervalHours: 12,
-        prescritor: 'Dr. Carlos Oliveira',
-        dataInicio: '2026-03-10',
-        dataFim: '2026-03-24',
-        status: 'ativa'
-    },
-    {
-        id: 'RX004',
-        patientId: 'P002',
-        medicamento: 'Ceftriaxona 1g',
-        dose: '1g diluído em 100ml SF',
-        via: 'EV',
-        frequencia: '12/12h',
-        intervalHours: 12,
-        prescritor: 'Dra. Ana Santos',
-        dataInicio: '2026-03-11',
-        dataFim: '2026-03-18',
-        status: 'ativa'
-    },
-    {
-        id: 'RX005',
-        patientId: 'P002',
-        medicamento: 'Omeprazol 40mg',
-        dose: '1 comprimido',
-        via: 'VO',
-        frequencia: '1x/dia',
-        intervalHours: 24,
-        prescritor: 'Dra. Ana Santos',
-        dataInicio: '2026-03-11',
-        dataFim: '2026-03-18',
-        status: 'ativa'
-    },
-    {
-        id: 'RX006',
-        patientId: 'P003',
-        medicamento: 'Noradrenalina 8mg/4ml',
-        dose: '0,1 mcg/kg/min',
-        via: 'EV BIC',
-        frequencia: 'contínuo',
-        intervalHours: 0,
-        prescritor: 'Dr. Paulo Lima',
-        dataInicio: '2026-03-13',
-        dataFim: '2026-03-16',
-        status: 'ativa'
-    },
-    {
-        id: 'RX007',
-        patientId: 'P003',
-        medicamento: 'Enoxaparina 40mg',
-        dose: '40mg',
-        via: 'SC',
-        frequencia: '1x/dia',
-        intervalHours: 24,
-        prescritor: 'Dr. Paulo Lima',
-        dataInicio: '2026-03-13',
-        dataFim: '2026-03-20',
-        status: 'ativa'
-    },
-    {
-        id: 'RX008',
-        patientId: 'P003',
-        medicamento: 'Dipirona 1g EV',
-        dose: '2ml diluído em 18ml AD',
-        via: 'EV',
-        frequencia: '6/6h',
-        intervalHours: 6,
-        prescritor: 'Dr. Paulo Lima',
-        dataInicio: '2026-03-13',
-        dataFim: '2026-03-16',
-        status: 'ativa'
-    },
-    {
-        id: 'RX009',
-        patientId: 'P004',
-        medicamento: 'Atenolol 50mg',
-        dose: '1 comprimido',
-        via: 'VO',
-        frequencia: '1x/dia',
-        intervalHours: 24,
-        prescritor: 'Dr. Carlos Oliveira',
-        dataInicio: '2026-03-12',
-        dataFim: '2026-03-26',
-        status: 'ativa'
-    },
-    {
-        id: 'RX010',
-        patientId: 'P004',
-        medicamento: 'Metformina 850mg',
-        dose: '1 comprimido',
-        via: 'VO',
-        frequencia: '8/8h',
-        intervalHours: 8,
-        prescritor: 'Dr. Carlos Oliveira',
-        dataInicio: '2026-03-12',
-        dataFim: '2026-03-26',
-        status: 'ativa'
-    },
-    {
-        id: 'RX011',
-        patientId: 'P004',
-        medicamento: 'Furosemida 40mg',
-        dose: '1 comprimido',
-        via: 'VO',
-        frequencia: '12/12h',
-        intervalHours: 12,
-        prescritor: 'Dr. Carlos Oliveira',
-        dataInicio: '2026-03-12',
-        dataFim: '2026-03-26',
-        status: 'ativa'
-    }
-];
-
-// Medication schedules (aprazamento)
-let schedules = [
-    // Patient P001 - Maria Silva Santos
-    { id: 'S001', prescriptionId: 'RX001', patientId: 'P001', medicamento: 'Dipirona 500mg', dose: '1 comprimido', via: 'VO', horarios: ['00:00', '06:00', '12:00', '18:00'], criadoPor: 'Enf. Carla Dias', criadoEm: '2026-03-12T08:00:00' },
-    { id: 'S002', prescriptionId: 'RX002', patientId: 'P001', medicamento: 'Losartana 50mg', dose: '1 comprimido', via: 'VO', horarios: ['08:00', '20:00'], criadoPor: 'Enf. Carla Dias', criadoEm: '2026-03-12T08:00:00' },
-    { id: 'S003', prescriptionId: 'RX003', patientId: 'P001', medicamento: 'Insulina NPH 10UI', dose: '10 unidades', via: 'SC', horarios: ['07:00', '19:00'], criadoPor: 'Enf. Carla Dias', criadoEm: '2026-03-12T08:00:00' },
-    // Patient P002 - José Carlos Oliveira
-    { id: 'S004', prescriptionId: 'RX004', patientId: 'P002', medicamento: 'Ceftriaxona 1g', dose: '1g diluído em 100ml SF', via: 'EV', horarios: ['06:00', '18:00'], criadoPor: 'Enf. Roberto Alves', criadoEm: '2026-03-11T14:00:00' },
-    { id: 'S005', prescriptionId: 'RX005', patientId: 'P002', medicamento: 'Omeprazol 40mg', dose: '1 comprimido', via: 'VO', horarios: ['06:00'], criadoPor: 'Enf. Roberto Alves', criadoEm: '2026-03-11T14:00:00' },
-    // Patient P004 - Pedro Henrique Lima
-    { id: 'S006', prescriptionId: 'RX009', patientId: 'P004', medicamento: 'Atenolol 50mg', dose: '1 comprimido', via: 'VO', horarios: ['08:00'], criadoPor: 'Enf. Carla Dias', criadoEm: '2026-03-12T08:00:00' },
-    { id: 'S007', prescriptionId: 'RX010', patientId: 'P004', medicamento: 'Metformina 850mg', dose: '1 comprimido', via: 'VO', horarios: ['06:00', '14:00', '22:00'], criadoPor: 'Enf. Carla Dias', criadoEm: '2026-03-12T08:00:00' },
-    { id: 'S008', prescriptionId: 'RX011', patientId: 'P004', medicamento: 'Furosemida 40mg', dose: '1 comprimido', via: 'VO', horarios: ['08:00', '20:00'], criadoPor: 'Enf. Carla Dias', criadoEm: '2026-03-12T08:00:00' }
-];
-
-// Medication checks (checagem)
-let checks = [
-    { id: 'C001', scheduleId: 'S001', prescriptionId: 'RX001', patientId: 'P001', medicamento: 'Dipirona 500mg', dose: '1 comprimido', via: 'VO', horarioPrevisto: '06:00', horarioReal: '06:12', data: '2026-03-14', status: 'administrado', responsavel: 'Téc. Enf. Luciana Moraes', observacoes: 'Paciente aceitou bem a medicação.' },
-    { id: 'C002', scheduleId: 'S002', prescriptionId: 'RX002', patientId: 'P001', medicamento: 'Losartana 50mg', dose: '1 comprimido', via: 'VO', horarioPrevisto: '08:00', horarioReal: '08:05', data: '2026-03-14', status: 'administrado', responsavel: 'Téc. Enf. Luciana Moraes', observacoes: '' },
-    { id: 'C003', scheduleId: 'S003', prescriptionId: 'RX003', patientId: 'P001', medicamento: 'Insulina NPH 10UI', dose: '10 unidades', via: 'SC', horarioPrevisto: '07:00', horarioReal: '07:08', data: '2026-03-14', status: 'administrado', responsavel: 'Enf. Carla Dias', observacoes: 'Glicemia capilar pré: 187 mg/dL. Aplicação em região abdominal.' },
-    { id: 'C004', scheduleId: 'S004', prescriptionId: 'RX004', patientId: 'P002', medicamento: 'Ceftriaxona 1g', dose: '1g diluído em 100ml SF', via: 'EV', horarioPrevisto: '06:00', horarioReal: '06:20', data: '2026-03-14', status: 'administrado', responsavel: 'Enf. Roberto Alves', observacoes: 'Infusão em 30 minutos. Sem reações adversas.' },
-    { id: 'C005', scheduleId: 'S005', prescriptionId: 'RX005', patientId: 'P002', medicamento: 'Omeprazol 40mg', dose: '1 comprimido', via: 'VO', horarioPrevisto: '06:00', horarioReal: '06:05', data: '2026-03-14', status: 'administrado', responsavel: 'Téc. Enf. Luciana Moraes', observacoes: 'Administrado em jejum.' },
-    { id: 'C006', scheduleId: 'S006', prescriptionId: 'RX009', patientId: 'P004', medicamento: 'Atenolol 50mg', dose: '1 comprimido', via: 'VO', horarioPrevisto: '08:00', horarioReal: '08:10', data: '2026-03-14', status: 'administrado', responsavel: 'Téc. Enf. Luciana Moraes', observacoes: 'PA pré: 148x92 mmHg. FC: 78 bpm.' },
-    { id: 'C007', scheduleId: 'S007', prescriptionId: 'RX010', patientId: 'P004', medicamento: 'Metformina 850mg', dose: '1 comprimido', via: 'VO', horarioPrevisto: '06:00', horarioReal: '06:15', data: '2026-03-14', status: 'administrado', responsavel: 'Téc. Enf. Luciana Moraes', observacoes: '' },
-    { id: 'C008', scheduleId: 'S008', prescriptionId: 'RX011', patientId: 'P004', medicamento: 'Furosemida 40mg', dose: '1 comprimido', via: 'VO', horarioPrevisto: '08:00', horarioReal: '08:12', data: '2026-03-14', status: 'administrado', responsavel: 'Téc. Enf. Luciana Moraes', observacoes: '' }
-];
-
-let nextScheduleId = 9;
-let nextCheckId = 9;
+import prisma from '../lib/prisma.js';
 
 /**
  * Generate time slots from frequency
@@ -229,115 +21,276 @@ function generateTimesFromFrequency(intervalHours, baseHour = 6) {
     return times;
 }
 
+/**
+ * Generate the next S-prefixed schedule ID.
+ */
+async function nextScheduleId() {
+    const last = await prisma.medicationSchedule.findFirst({
+        where: { id: { startsWith: 'S' } },
+        orderBy: { id: 'desc' }
+    });
+
+    let nextNum = 1;
+    if (last) {
+        const numPart = parseInt(last.id.replace('S', ''), 10);
+        if (!isNaN(numPart)) nextNum = numPart + 1;
+    }
+
+    return `S${String(nextNum).padStart(3, '0')}`;
+}
+
+/**
+ * Generate the next C-prefixed check ID.
+ */
+async function nextCheckId() {
+    const last = await prisma.medicationCheck.findFirst({
+        where: { id: { startsWith: 'C' } },
+        orderBy: { id: 'desc' }
+    });
+
+    let nextNum = 1;
+    if (last) {
+        const numPart = parseInt(last.id.replace('C', ''), 10);
+        if (!isNaN(numPart)) nextNum = numPart + 1;
+    }
+
+    return `C${String(nextNum).padStart(3, '0')}`;
+}
+
 class NursingService {
     /**
      * Get all patients
      */
-    getPatients() {
-        return patients;
+    async getPatients() {
+        const patients = await prisma.nursingPatient.findMany({
+            orderBy: { id: 'asc' }
+        });
+
+        return patients.map(p => ({
+            id: p.id,
+            nome: p.nome,
+            leito: p.leito,
+            idade: p.idade,
+            prontuario: p.prontuario
+        }));
     }
 
     /**
      * Get prescriptions for a patient
      */
-    getPrescriptionsByPatient(patientId) {
-        return prescriptions.filter(p => p.patientId === patientId && p.status === 'ativa');
+    async getPrescriptionsByPatient(patientId) {
+        const prescriptions = await prisma.nursingPrescription.findMany({
+            where: { patientId, status: 'ativa' },
+            orderBy: { id: 'asc' }
+        });
+
+        return prescriptions.map(p => ({
+            id: p.id,
+            patientId: p.patientId,
+            medicamento: p.medicamento,
+            dose: p.dose,
+            via: p.via,
+            frequencia: p.frequencia,
+            intervalHours: p.intervalHours,
+            prescritor: p.prescritor,
+            dataInicio: p.dataInicio,
+            dataFim: p.dataFim,
+            status: p.status
+        }));
     }
 
     /**
-     * Create a medication schedule (aprazamento)
+     * Create a medication schedule (aprazamento).
+     * Deletes existing schedule for the same prescription first, inside a transaction.
      */
-    createSchedule({ prescriptionId, patientId, horarios, criadoPor }) {
-        const prescription = prescriptions.find(p => p.id === prescriptionId);
+    async createSchedule({ prescriptionId, patientId, horarios, criadoPor }) {
+        const prescription = await prisma.nursingPrescription.findUnique({
+            where: { id: prescriptionId }
+        });
+
         if (!prescription) {
-            throw new Error('Prescrição não encontrada');
+            throw new Error('Prescricao nao encontrada');
         }
 
-        // Remove existing schedule for this prescription if any
-        schedules = schedules.filter(s => s.prescriptionId !== prescriptionId);
+        const schedId = await nextScheduleId();
+        const resolvedPatientId = patientId || prescription.patientId;
+        const resolvedHorarios = horarios || generateTimesFromFrequency(prescription.intervalHours);
 
-        const schedule = {
-            id: `S${String(nextScheduleId++).padStart(3, '0')}`,
-            prescriptionId,
-            patientId: patientId || prescription.patientId,
-            medicamento: prescription.medicamento,
-            dose: prescription.dose,
-            via: prescription.via,
-            horarios: horarios || generateTimesFromFrequency(prescription.intervalHours),
-            criadoPor: criadoPor || 'Enfermeiro(a)',
-            criadoEm: new Date().toISOString()
+        const schedule = await prisma.$transaction(async (tx) => {
+            // Remove existing schedule for this prescription
+            await tx.medicationSchedule.deleteMany({
+                where: { prescriptionId }
+            });
+
+            return tx.medicationSchedule.create({
+                data: {
+                    id: schedId,
+                    prescriptionId,
+                    patientId: resolvedPatientId,
+                    medicamento: prescription.medicamento,
+                    dose: prescription.dose,
+                    via: prescription.via,
+                    horarios: resolvedHorarios,
+                    criadoPor: criadoPor || 'Enfermeiro(a)'
+                }
+            });
+        });
+
+        return {
+            id: schedule.id,
+            prescriptionId: schedule.prescriptionId,
+            patientId: schedule.patientId,
+            medicamento: schedule.medicamento,
+            dose: schedule.dose,
+            via: schedule.via,
+            horarios: schedule.horarios,
+            criadoPor: schedule.criadoPor,
+            criadoEm: schedule.createdAt.toISOString()
         };
-
-        schedules.push(schedule);
-        return schedule;
     }
 
     /**
      * Get schedules for a patient
      */
-    getSchedulesByPatient(patientId) {
-        return schedules.filter(s => s.patientId === patientId);
+    async getSchedulesByPatient(patientId) {
+        const schedules = await prisma.medicationSchedule.findMany({
+            where: { patientId },
+            orderBy: { id: 'asc' }
+        });
+
+        return schedules.map(s => ({
+            id: s.id,
+            prescriptionId: s.prescriptionId,
+            patientId: s.patientId,
+            medicamento: s.medicamento,
+            dose: s.dose,
+            via: s.via,
+            horarios: s.horarios,
+            criadoPor: s.criadoPor,
+            criadoEm: s.createdAt.toISOString()
+        }));
     }
 
     /**
      * Get all schedules
      */
-    getAllSchedules() {
-        return schedules;
+    async getAllSchedules() {
+        const schedules = await prisma.medicationSchedule.findMany({
+            orderBy: { id: 'asc' }
+        });
+
+        return schedules.map(s => ({
+            id: s.id,
+            prescriptionId: s.prescriptionId,
+            patientId: s.patientId,
+            medicamento: s.medicamento,
+            dose: s.dose,
+            via: s.via,
+            horarios: s.horarios,
+            criadoPor: s.criadoPor,
+            criadoEm: s.createdAt.toISOString()
+        }));
     }
 
     /**
      * Record a medication administration (checagem)
      */
-    checkMedication({ scheduleId, prescriptionId, patientId, medicamento, dose, via, horarioPrevisto, horarioReal, data, responsavel, observacoes }) {
-        const check = {
-            id: `C${String(nextCheckId++).padStart(3, '0')}`,
-            scheduleId,
-            prescriptionId,
-            patientId,
-            medicamento,
-            dose,
-            via,
-            horarioPrevisto,
-            horarioReal: horarioReal || new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-            data: data || new Date().toISOString().split('T')[0],
-            status: 'administrado',
-            responsavel: responsavel || 'Enfermeiro(a)',
-            observacoes: observacoes || ''
-        };
+    async checkMedication({ scheduleId, prescriptionId, patientId, medicamento, dose, via, horarioPrevisto, horarioReal, data, responsavel, observacoes }) {
+        const checkId = await nextCheckId();
 
-        checks.push(check);
-        return check;
+        const check = await prisma.medicationCheck.create({
+            data: {
+                id: checkId,
+                scheduleId,
+                prescriptionId,
+                patientId,
+                medicamento,
+                dose,
+                via,
+                horarioPrevisto,
+                horarioReal: horarioReal || new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+                data: data || new Date().toISOString().split('T')[0],
+                status: 'administrado',
+                responsavel: responsavel || 'Enfermeiro(a)',
+                observacoes: observacoes || ''
+            }
+        });
+
+        return {
+            id: check.id,
+            scheduleId: check.scheduleId,
+            prescriptionId: check.prescriptionId,
+            patientId: check.patientId,
+            medicamento: check.medicamento,
+            dose: check.dose,
+            via: check.via,
+            horarioPrevisto: check.horarioPrevisto,
+            horarioReal: check.horarioReal,
+            data: check.data,
+            status: check.status,
+            responsavel: check.responsavel,
+            observacoes: check.observacoes
+        };
     }
 
     /**
-     * Get checks for a patient
+     * Get checks for a patient (or all checks if no patientId)
      */
-    getChecks(patientId) {
+    async getChecks(patientId) {
+        const where = {};
         if (patientId) {
-            return checks.filter(c => c.patientId === patientId);
+            where.patientId = patientId;
         }
-        return checks;
+
+        const checks = await prisma.medicationCheck.findMany({
+            where,
+            orderBy: { id: 'asc' }
+        });
+
+        return checks.map(c => ({
+            id: c.id,
+            scheduleId: c.scheduleId,
+            prescriptionId: c.prescriptionId,
+            patientId: c.patientId,
+            medicamento: c.medicamento,
+            dose: c.dose,
+            via: c.via,
+            horarioPrevisto: c.horarioPrevisto,
+            horarioReal: c.horarioReal,
+            data: c.data,
+            status: c.status,
+            responsavel: c.responsavel,
+            observacoes: c.observacoes
+        }));
     }
 
     /**
      * Get pending medications - those scheduled but not yet checked for today
      */
-    getPendingMedications() {
+    async getPendingMedications() {
         const today = new Date().toISOString().split('T')[0];
         const currentHour = new Date().getHours();
         const currentMinute = new Date().getMinutes();
-        const currentTimeStr = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
+
+        // Fetch all schedules with their patient info
+        const schedules = await prisma.medicationSchedule.findMany({
+            include: { patient: true }
+        });
+
+        // Fetch today's checks in a single query
+        const todayChecks = await prisma.medicationCheck.findMany({
+            where: { data: today }
+        });
 
         const pending = [];
 
-        schedules.forEach(schedule => {
-            const patient = patients.find(p => p.id === schedule.patientId);
-            if (!patient) return;
+        for (const schedule of schedules) {
+            const patient = schedule.patient;
+            if (!patient) continue;
 
-            schedule.horarios.forEach(horario => {
+            for (const horario of schedule.horarios) {
                 // Check if already administered today at this time
-                const alreadyChecked = checks.some(
+                const alreadyChecked = todayChecks.some(
                     c => c.scheduleId === schedule.id &&
                         c.horarioPrevisto === horario &&
                         c.data === today
@@ -370,8 +323,8 @@ class NursingService {
                     data: today,
                     status
                 });
-            });
-        });
+            }
+        }
 
         // Sort by scheduled time
         pending.sort((a, b) => a.horarioPrevisto.localeCompare(b.horarioPrevisto));

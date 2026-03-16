@@ -25,7 +25,7 @@ router.post('/continuous-meds', async (req, res) => {
             });
         }
 
-        const result = reconciliationService.registerContinuousMedications(patientId, patientName, medications);
+        const result = await reconciliationService.registerContinuousMedications(patientId, patientName, medications);
 
         res.json({
             success: true,
@@ -48,7 +48,7 @@ router.get('/continuous-meds/:patientId', async (req, res) => {
     try {
         const { patientId } = req.params;
 
-        const patient = reconciliationService.getContinuousMedications(patientId);
+        const patient = await reconciliationService.getContinuousMedications(patientId);
 
         if (!patient) {
             return res.status(404).json({
@@ -76,7 +76,7 @@ router.get('/continuous-meds/:patientId', async (req, res) => {
  */
 router.get('/patients', async (req, res) => {
     try {
-        const patients = reconciliationService.getAllPatients();
+        const patients = await reconciliationService.getAllPatients();
 
         res.json({
             success: true,
@@ -99,7 +99,7 @@ router.delete('/continuous-meds/:patientId/:medicationId', async (req, res) => {
     try {
         const { patientId, medicationId } = req.params;
 
-        const result = reconciliationService.removeMedication(patientId, parseInt(medicationId));
+        const result = await reconciliationService.removeMedication(patientId, parseInt(medicationId));
 
         if (!result) {
             return res.status(404).json({
@@ -130,7 +130,7 @@ router.put('/continuous-meds/:patientId/:medicationId', async (req, res) => {
         const { patientId, medicationId } = req.params;
         const updates = req.body;
 
-        const result = reconciliationService.updateMedication(patientId, parseInt(medicationId), updates);
+        const result = await reconciliationService.updateMedication(patientId, parseInt(medicationId), updates);
 
         if (!result) {
             return res.status(404).json({
@@ -174,7 +174,7 @@ router.post('/reconcile', async (req, res) => {
             });
         }
 
-        const result = reconciliationService.reconcile(patientId, newPrescription);
+        const result = await reconciliationService.reconcile(patientId, newPrescription);
 
         if (result.error) {
             return res.status(404).json({
@@ -211,7 +211,7 @@ router.post('/check-interactions', async (req, res) => {
             });
         }
 
-        const result = reconciliationService.checkInteractions(medications);
+        const result = await reconciliationService.checkInteractions(medications);
 
         res.json({
             success: true,

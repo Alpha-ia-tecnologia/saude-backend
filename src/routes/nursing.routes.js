@@ -3,13 +3,9 @@ import { nursingService } from '../services/nursing.service.js';
 
 const router = express.Router();
 
-/**
- * GET /api/nursing/patients
- * List all patients with active prescriptions
- */
-router.get('/patients', (req, res) => {
+router.get('/patients', async (req, res) => {
     try {
-        const patients = nursingService.getPatients();
+        const patients = await nursingService.getPatients();
         res.json({ success: true, data: patients });
     } catch (error) {
         console.error('Erro ao buscar pacientes:', error);
@@ -17,14 +13,10 @@ router.get('/patients', (req, res) => {
     }
 });
 
-/**
- * GET /api/nursing/prescriptions/:patientId
- * Get active prescriptions for a patient
- */
-router.get('/prescriptions/:patientId', (req, res) => {
+router.get('/prescriptions/:patientId', async (req, res) => {
     try {
         const { patientId } = req.params;
-        const prescriptions = nursingService.getPrescriptionsByPatient(patientId);
+        const prescriptions = await nursingService.getPrescriptionsByPatient(patientId);
         res.json({ success: true, data: prescriptions });
     } catch (error) {
         console.error('Erro ao buscar prescrições:', error);
@@ -32,28 +24,13 @@ router.get('/prescriptions/:patientId', (req, res) => {
     }
 });
 
-/**
- * POST /api/nursing/schedule
- * Create medication schedule (aprazamento)
- */
-router.post('/schedule', (req, res) => {
+router.post('/schedule', async (req, res) => {
     try {
         const { prescriptionId, patientId, horarios, criadoPor } = req.body;
-
         if (!prescriptionId) {
-            return res.status(400).json({
-                success: false,
-                error: 'ID da prescrição é obrigatório'
-            });
+            return res.status(400).json({ success: false, error: 'ID da prescrição é obrigatório' });
         }
-
-        const schedule = nursingService.createSchedule({
-            prescriptionId,
-            patientId,
-            horarios,
-            criadoPor
-        });
-
+        const schedule = await nursingService.createSchedule({ prescriptionId, patientId, horarios, criadoPor });
         res.json({ success: true, data: schedule });
     } catch (error) {
         console.error('Erro ao criar aprazamento:', error);
@@ -61,14 +38,10 @@ router.post('/schedule', (req, res) => {
     }
 });
 
-/**
- * GET /api/nursing/schedule/:patientId
- * Get patient's medication schedule
- */
-router.get('/schedule/:patientId', (req, res) => {
+router.get('/schedule/:patientId', async (req, res) => {
     try {
         const { patientId } = req.params;
-        const schedules = nursingService.getSchedulesByPatient(patientId);
+        const schedules = await nursingService.getSchedulesByPatient(patientId);
         res.json({ success: true, data: schedules });
     } catch (error) {
         console.error('Erro ao buscar aprazamento:', error);
@@ -76,13 +49,9 @@ router.get('/schedule/:patientId', (req, res) => {
     }
 });
 
-/**
- * GET /api/nursing/pending
- * Get all pending medications (due now or overdue)
- */
-router.get('/pending', (req, res) => {
+router.get('/pending', async (req, res) => {
     try {
-        const pending = nursingService.getPendingMedications();
+        const pending = await nursingService.getPendingMedications();
         res.json({ success: true, data: pending });
     } catch (error) {
         console.error('Erro ao buscar medicações pendentes:', error);
@@ -90,47 +59,13 @@ router.get('/pending', (req, res) => {
     }
 });
 
-/**
- * POST /api/nursing/check
- * Record medication administration (checagem)
- */
-router.post('/check', (req, res) => {
+router.post('/check', async (req, res) => {
     try {
-        const {
-            scheduleId,
-            prescriptionId,
-            patientId,
-            medicamento,
-            dose,
-            via,
-            horarioPrevisto,
-            horarioReal,
-            data,
-            responsavel,
-            observacoes
-        } = req.body;
-
+        const { scheduleId, prescriptionId, patientId, medicamento, dose, via, horarioPrevisto, horarioReal, data, responsavel, observacoes } = req.body;
         if (!scheduleId || !patientId || !medicamento) {
-            return res.status(400).json({
-                success: false,
-                error: 'scheduleId, patientId e medicamento são obrigatórios'
-            });
+            return res.status(400).json({ success: false, error: 'scheduleId, patientId e medicamento são obrigatórios' });
         }
-
-        const check = nursingService.checkMedication({
-            scheduleId,
-            prescriptionId,
-            patientId,
-            medicamento,
-            dose,
-            via,
-            horarioPrevisto,
-            horarioReal,
-            data,
-            responsavel,
-            observacoes
-        });
-
+        const check = await nursingService.checkMedication({ scheduleId, prescriptionId, patientId, medicamento, dose, via, horarioPrevisto, horarioReal, data, responsavel, observacoes });
         res.json({ success: true, data: check });
     } catch (error) {
         console.error('Erro ao registrar checagem:', error);
@@ -138,14 +73,10 @@ router.post('/check', (req, res) => {
     }
 });
 
-/**
- * GET /api/nursing/checks/:patientId
- * Get medication check history
- */
-router.get('/checks/:patientId', (req, res) => {
+router.get('/checks/:patientId', async (req, res) => {
     try {
         const { patientId } = req.params;
-        const checksData = nursingService.getChecks(patientId);
+        const checksData = await nursingService.getChecks(patientId);
         res.json({ success: true, data: checksData });
     } catch (error) {
         console.error('Erro ao buscar checagens:', error);
@@ -153,13 +84,9 @@ router.get('/checks/:patientId', (req, res) => {
     }
 });
 
-/**
- * GET /api/nursing/checks
- * Get all medication check history
- */
-router.get('/checks', (req, res) => {
+router.get('/checks', async (req, res) => {
     try {
-        const checksData = nursingService.getChecks();
+        const checksData = await nursingService.getChecks();
         res.json({ success: true, data: checksData });
     } catch (error) {
         console.error('Erro ao buscar checagens:', error);
@@ -167,17 +94,13 @@ router.get('/checks', (req, res) => {
     }
 });
 
-/**
- * GET /api/nursing/suggest-times/:intervalHours
- * Suggest times based on frequency interval
- */
-router.get('/suggest-times/:intervalHours', (req, res) => {
+router.get('/suggest-times/:intervalHours', async (req, res) => {
     try {
         const intervalHours = parseInt(req.params.intervalHours, 10);
         if (isNaN(intervalHours) || intervalHours <= 0) {
             return res.status(400).json({ success: false, error: 'Intervalo inválido' });
         }
-        const times = nursingService.suggestTimes(intervalHours);
+        const times = await nursingService.suggestTimes(intervalHours);
         res.json({ success: true, data: times });
     } catch (error) {
         console.error('Erro ao sugerir horários:', error);

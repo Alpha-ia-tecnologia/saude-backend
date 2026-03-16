@@ -3,13 +3,9 @@ import { panelService } from '../services/panel.service.js';
 
 const router = express.Router();
 
-/**
- * GET /api/panel/guiches
- * Listar todos os guiches/salas de atendimento
- */
-router.get('/guiches', (req, res) => {
+router.get('/guiches', async (req, res) => {
     try {
-        const guiches = panelService.getGuiches();
+        const guiches = await panelService.getGuiches();
         res.json({ success: true, data: guiches });
     } catch (error) {
         console.error('Erro ao buscar guiches:', error);
@@ -17,33 +13,20 @@ router.get('/guiches', (req, res) => {
     }
 });
 
-/**
- * GET /api/panel/senhas?status=aguardando
- * Listar senhas com filtro opcional por status
- */
-router.get('/senhas', (req, res) => {
+router.get('/senhas', async (req, res) => {
     try {
         const { status } = req.query;
-        const senhas = panelService.getSenhas(status || null);
-        res.json({
-            success: true,
-            data: senhas,
-            total: senhas.length
-        });
+        const senhas = await panelService.getSenhas(status || null);
+        res.json({ success: true, data: senhas, total: senhas.length });
     } catch (error) {
         console.error('Erro ao buscar senhas:', error);
         res.status(500).json({ success: false, error: 'Erro ao buscar senhas' });
     }
 });
 
-/**
- * GET /api/panel/senha-atual
- * Obter senha sendo chamada atualmente + ultimas 5 chamadas
- */
-router.get('/senha-atual', (req, res) => {
+router.get('/senha-atual', async (req, res) => {
     try {
-        const resultado = panelService.getSenhaAtual();
-        // Return directly (not wrapped) - TV panel expects chamadaAtual at top level
+        const resultado = await panelService.getSenhaAtual();
         res.json(resultado);
     } catch (error) {
         console.error('Erro ao buscar senha atual:', error);
@@ -51,22 +34,13 @@ router.get('/senha-atual', (req, res) => {
     }
 });
 
-/**
- * POST /api/panel/senhas
- * Criar nova senha
- */
-router.post('/senhas', (req, res) => {
+router.post('/senhas', async (req, res) => {
     try {
         const { paciente, cpf, tipo, prioridade } = req.body;
-
         if (!paciente) {
-            return res.status(400).json({
-                success: false,
-                error: 'Nome do paciente e obrigatorio'
-            });
+            return res.status(400).json({ success: false, error: 'Nome do paciente e obrigatorio' });
         }
-
-        const novaSenha = panelService.criarSenha({ paciente, cpf, tipo, prioridade });
+        const novaSenha = await panelService.criarSenha({ paciente, cpf, tipo, prioridade });
         res.status(201).json({ success: true, data: novaSenha });
     } catch (error) {
         console.error('Erro ao criar senha:', error);
@@ -74,31 +48,16 @@ router.post('/senhas', (req, res) => {
     }
 });
 
-/**
- * POST /api/panel/chamar-proxima
- * Chamar proxima senha na fila (preferencial primeiro)
- */
-router.post('/chamar-proxima', (req, res) => {
+router.post('/chamar-proxima', async (req, res) => {
     try {
         const { guicheId } = req.body;
-
         if (!guicheId) {
-            return res.status(400).json({
-                success: false,
-                error: 'guicheId e obrigatorio'
-            });
+            return res.status(400).json({ success: false, error: 'guicheId e obrigatorio' });
         }
-
-        const resultado = panelService.chamarProxima(guicheId);
-
+        const resultado = await panelService.chamarProxima(guicheId);
         if (!resultado) {
-            return res.json({
-                success: true,
-                data: null,
-                mensagem: 'Nenhuma senha na fila de espera'
-            });
+            return res.json({ success: true, data: null, mensagem: 'Nenhuma senha na fila de espera' });
         }
-
         res.json({ success: true, data: resultado });
     } catch (error) {
         console.error('Erro ao chamar proxima senha:', error);
@@ -106,23 +65,14 @@ router.post('/chamar-proxima', (req, res) => {
     }
 });
 
-/**
- * POST /api/panel/chamar/:id
- * Chamar uma senha especifica
- */
-router.post('/chamar/:id', (req, res) => {
+router.post('/chamar/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { guicheId } = req.body;
-
         if (!guicheId) {
-            return res.status(400).json({
-                success: false,
-                error: 'guicheId e obrigatorio'
-            });
+            return res.status(400).json({ success: false, error: 'guicheId e obrigatorio' });
         }
-
-        const resultado = panelService.chamarSenha(id, guicheId);
+        const resultado = await panelService.chamarSenha(id, guicheId);
         res.json({ success: true, data: resultado });
     } catch (error) {
         console.error('Erro ao chamar senha:', error);
@@ -130,14 +80,10 @@ router.post('/chamar/:id', (req, res) => {
     }
 });
 
-/**
- * POST /api/panel/rechamar/:id
- * Rechamar a mesma senha
- */
-router.post('/rechamar/:id', (req, res) => {
+router.post('/rechamar/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const resultado = panelService.rechamar(id);
+        const resultado = await panelService.rechamar(id);
         res.json({ success: true, data: resultado });
     } catch (error) {
         console.error('Erro ao rechamar senha:', error);
@@ -145,14 +91,10 @@ router.post('/rechamar/:id', (req, res) => {
     }
 });
 
-/**
- * POST /api/panel/iniciar/:id
- * Iniciar atendimento
- */
-router.post('/iniciar/:id', (req, res) => {
+router.post('/iniciar/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const senha = panelService.iniciarAtendimento(id);
+        const senha = await panelService.iniciarAtendimento(id);
         res.json({ success: true, data: senha });
     } catch (error) {
         console.error('Erro ao iniciar atendimento:', error);
@@ -160,14 +102,10 @@ router.post('/iniciar/:id', (req, res) => {
     }
 });
 
-/**
- * POST /api/panel/finalizar/:id
- * Finalizar atendimento
- */
-router.post('/finalizar/:id', (req, res) => {
+router.post('/finalizar/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const senha = panelService.finalizarAtendimento(id);
+        const senha = await panelService.finalizarAtendimento(id);
         res.json({ success: true, data: senha });
     } catch (error) {
         console.error('Erro ao finalizar atendimento:', error);
@@ -175,14 +113,10 @@ router.post('/finalizar/:id', (req, res) => {
     }
 });
 
-/**
- * POST /api/panel/ausente/:id
- * Marcar paciente como ausente
- */
-router.post('/ausente/:id', (req, res) => {
+router.post('/ausente/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const senha = panelService.marcarAusente(id);
+        const senha = await panelService.marcarAusente(id);
         res.json({ success: true, data: senha });
     } catch (error) {
         console.error('Erro ao marcar ausente:', error);
@@ -190,13 +124,9 @@ router.post('/ausente/:id', (req, res) => {
     }
 });
 
-/**
- * GET /api/panel/estatisticas
- * Obter estatisticas do painel
- */
-router.get('/estatisticas', (req, res) => {
+router.get('/estatisticas', async (req, res) => {
     try {
-        const estatisticas = panelService.getEstatisticas();
+        const estatisticas = await panelService.getEstatisticas();
         res.json({ success: true, data: estatisticas });
     } catch (error) {
         console.error('Erro ao buscar estatisticas:', error);
@@ -204,32 +134,20 @@ router.get('/estatisticas', (req, res) => {
     }
 });
 
-/**
- * GET /api/panel/historico?limit=20
- * Obter historico de chamadas
- */
-router.get('/historico', (req, res) => {
+router.get('/historico', async (req, res) => {
     try {
         const limit = parseInt(req.query.limit, 10) || 20;
-        const historico = panelService.getHistoricoChamadas(limit);
-        res.json({
-            success: true,
-            data: historico,
-            total: historico.length
-        });
+        const historico = await panelService.getHistoricoChamadas(limit);
+        res.json({ success: true, data: historico, total: historico.length });
     } catch (error) {
         console.error('Erro ao buscar historico:', error);
         res.status(500).json({ success: false, error: 'Erro ao buscar historico' });
     }
 });
 
-/**
- * POST /api/panel/resetar
- * Resetar painel (limpar todas as senhas para novo dia)
- */
-router.post('/resetar', (req, res) => {
+router.post('/resetar', async (req, res) => {
     try {
-        const resultado = panelService.resetarPainel();
+        const resultado = await panelService.resetarPainel();
         res.json({ success: true, data: resultado });
     } catch (error) {
         console.error('Erro ao resetar painel:', error);
