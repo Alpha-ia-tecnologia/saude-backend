@@ -230,7 +230,8 @@ router.post('/chat', async (req, res) => {
         console.error('Erro na API de IA:', error.response?.data || error.message);
         res.status(500).json({
             error: 'Erro ao processar requisição de IA',
-            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+            details: error.message,
+            stack: error.stack?.split('\n').slice(0, 3)
         });
     }
 });
